@@ -1,0 +1,544 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- Leaflet CSS & Draw CSS & Geocoder CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+
+<style>
+/* ── Crop-plant animation keyframes ── */
+@keyframes sway { 0%,100%{transform:translateZ(var(--h)) rotate(-3deg);}50%{transform:translateZ(var(--h)) rotate(3deg);}}
+@keyframes pulse-glow { 0%,100%{box-shadow:0 0 8px 3px var(--glow),inset 0 0 5px rgba(255,255,255,0.3);} 50%{box-shadow:0 0 16px 6px var(--glow),inset 0 0 10px rgba(255,255,255,0.5);}}
+@keyframes bob { 0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+.plant-node { transition: transform 0.2s ease; }
+.plant-node:hover { transform: scale(1.3) !important; z-index: 9999 !important; }
+.plant-stalk-3d { transform-style: preserve-3d; }
+#legend-panel { display:none; flex-wrap:wrap; gap:10px; padding:16px 20px; background:#fff;
+    border:1px solid #e2e8f0; border-radius:10px; margin-top:1rem;
+    box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.legend-item { display:flex; align-items:center; gap:7px; font-size:0.88rem; font-weight:600; color:#334155; }
+.legend-dot { width:18px; height:18px; border-radius:50%; border:2px solid rgba(0,0,0,0.15); }
+</style>
+
+<div class="card" style="margin-bottom: 2rem;">
+    <h2 style="color: var(--primary);">SuperFarmer: Spatial Twin for Smart Farming</h2>
+    <p>Generate an AI-powered, 3D multi-crop layout tailored to your soil, water, and acreage.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+    
+    <!-- MAP PANEL -->
+    <div class="card" style="padding: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; color: #475569; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
+            Select Your Land on Map
+            <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
+        </h3>
+        
+        <div id="map" style="height: 380px; border-radius: 8px; border: 2px solid var(--border);"></div>
+        
+        <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 1.1rem; color: #334155;">Farm Area Selected: <br><strong id="acres_display" style="font-size: 1.4rem; color: var(--primary);">0.00 Acres</strong></div>
+            <button class="btn" style="padding: 0.8rem 2rem; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Confirm</button>
+        </div>
+    </div>
+
+    <!-- 2D LAYOUT PANEL -->
+    <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column;">
+        <h3 style="margin-bottom: 1rem; color: #475569; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
+            2D Farm Layout Planning
+            <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
+        </h3>
+        
+        <div id="grid-layout-container" style="flex-grow: 1; position: relative; overflow: hidden; background: #f1f5f9; padding: 0px; border-radius: 8px; border: 1px solid #cbd5e1; min-height: 500px; width: 800px; margin: 0 auto; box-sizing: border-box;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 1.1rem; text-align: center; width: 100%;">
+                Select a crop and click Optimize Layout
+            </div>
+        </div>
+        
+        <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; gap: 0.5rem; justify-content: space-between;">
+                <button class="btn layout-btn" onclick="setLayout('Grid Layout', this)" style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">🔲 Grid Layout</button>
+                <button class="btn layout-btn" onclick="setLayout('Strip Layout', this)" style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">⏸ Strip Layout</button>
+                <button class="btn layout-btn" onclick="setLayout('Row Layout', this)" style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">☰ Row Layout</button>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <select id="main_crop" style="flex: 1; padding: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1;">
+                    <option value="Auto">🤖 Auto-Recommend</option>
+                    <optgroup label="── Cereals ──">
+                        <option value="Corn">🌽 Corn</option>
+                        <option value="Maize">🌽 Maize</option>
+                        <option value="Wheat">🌾 Wheat</option>
+                        <option value="Rice">🌾 Rice</option>
+                    </optgroup>
+                    <optgroup label="── Vegetables ──">
+                        <option value="Tomato">🍅 Tomato</option>
+                        <option value="Potato">🥔 Potato</option>
+                        <option value="Onion">🧅 Onion</option>
+                        <option value="Garlic">🧄 Garlic</option>
+                    </optgroup>
+                    <optgroup label="── Cash Crops ──">
+                        <option value="Sugarcane">🎋 Sugarcane</option>
+                        <option value="Cotton">🪴 Cotton</option>
+                        <option value="Sunflower">🌻 Sunflower</option>
+                        <option value="Mustard">🌿 Mustard</option>
+                    </optgroup>
+                    <optgroup label="── Legumes ──">
+                        <option value="Soybean">🫘 Soybean</option>
+                        <option value="Groundnut">🥜 Groundnut</option>
+                        <option value="Chickpea">🫘 Chickpea</option>
+                    </optgroup>
+                    <optgroup label="── Companions ──">
+                        <option value="Marigold">🌼 Marigold</option>
+                    </optgroup>
+                </select>
+                <button class="btn" onclick="generateTwin()" style="background-color: var(--primary); font-weight: bold; padding: 0.8rem 1.5rem; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.4);">Optimize Layout</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3D VISUALIZATION PANEL -->
+<div class="card" style="padding: 1.5rem; overflow: hidden;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+        <h3 style="margin:0; color: #475569; display: flex; align-items: center; gap: 10px;">
+            <span style="border-top: 1px solid #cbd5e1; width:60px; display:inline-block;"></span>
+            🌾 3D Spatial Twin Visualization
+            <span style="border-top: 1px solid #cbd5e1; width:60px; display:inline-block;"></span>
+        </h3>
+        <div style="display:flex;gap:8px;">
+            <button onclick="resetView()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;font-size:0.8rem;cursor:pointer;">⟳ Reset View</button>
+            <span style="background:#ecfdf5;color:#16a34a;border-radius:6px;padding:6px 12px;font-size:0.8rem;font-weight:600;">🖱 Drag to rotate · Scroll to zoom</span>
+        </div>
+    </div>
+
+    <!-- CSS 3D Space -->
+    <div id="isometric-wrapper" style="perspective: 1800px; padding: 3rem 0 7rem 0; display: flex; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #e0f2fe 0%, #f8fafc 60%, #e5e7eb 100%); overflow: hidden; cursor: grab; border-radius:10px; border:1px solid #e2e8f0;">
+        <!-- The Isometric Floor Plane -->
+        <div id="isometric-floor" style="width: 800px; height: 500px; transform: rotateX(60deg) rotateZ(-45deg); border-radius: 14px; box-shadow: -30px 40px 70px rgba(0,0,0,0.2); position: relative; overflow: visible; transform-style: preserve-3d; margin: 0 auto; background: repeating-conic-gradient(#a7c47a 0% 25%, #8fb56a 25% 50%) 0 0 / 40px 40px;">
+
+            <!-- Soil border frame -->
+            <div style="position:absolute;inset:0;border-radius:14px;border:6px solid #5c3d1a;box-shadow:inset 0 0 30px rgba(0,0,0,0.2);"></div>
+
+            <!-- Water tank (blue sphere) -->
+            <div style="position: absolute; top: -70px; right: 30px; width: 55px; height: 55px; background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8); border-radius: 50%; box-shadow: -5px 8px 20px rgba(0,0,0,0.4); transform: translateZ(60px); z-index:20;"></div>
+            <!-- Water tank label -->
+            <div style="position:absolute;top:-92px;right:12px;font-size:0.6rem;font-weight:700;color:#1d4ed8;transform:translateZ(60px);z-index:20;text-shadow:0 1px 2px #fff;">💧 Tank</div>
+
+            <!-- Barn -->
+            <div style="position: absolute; top: -130px; right: 100px; width: 90px; height: 70px; background: linear-gradient(180deg,#b45309,#92400e); border-radius: 4px; box-shadow: -6px 10px 25px rgba(0,0,0,0.45); transform: translateZ(55px); z-index:20;">
+                <div style="position:absolute;top:-22px;left:-6px;right:-6px;height:26px;background:linear-gradient(160deg,#dc2626,#991b1b);clip-path:polygon(0 100%,50% 0,100% 100%); border-radius:2px;"></div>
+                <div style="position:absolute;bottom:0;left:30%;width:40%;height:55%;background:#451a03;border-radius:2px 2px 0 0;"></div>
+            </div>
+            <div style="position:absolute;top:-148px;right:90px;font-size:0.6rem;font-weight:700;color:#92400e;transform:translateZ(55px);z-index:20;text-shadow:0 1px 2px #fff;">🏠 Barn</div>
+
+            <!-- Waiting label -->
+            <div id="waiting-label-3d" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg); font-size: 1.4rem; color: #6b7280; font-weight: bold; z-index: 10; white-space:nowrap;">🌱 Waiting for generation...</div>
+        </div>
+    </div>
+
+    <!-- Crop Legend -->
+    <div id="legend-panel"></div>
+
+    <!-- Display Details -->
+    <div id="analysis_result" style="display: none; margin-top: 1.5rem; padding: 2rem; background: linear-gradient(135deg,#f0fdf4,#ecfdf5); border-left: 5px solid var(--primary); border-radius: 10px; font-size: 1.05rem; line-height: 1.7; box-shadow: 0 4px 12px rgba(22,163,74,0.08);"></div>
+</div>
+
+<!-- Scripts for Map and Rendering -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script>
+    // 1. Initialize Map
+    const map = L.map('map').setView([20.5937, 78.9629], 5); // Default India map
+    
+    // Using Esri Satellite Map
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri'
+    }).addTo(map);
+
+    // Add Esri Reference Labels (Cities, Borders, Streets)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Labels &copy; Esri'
+    }).addTo(map);
+
+    // Add Geocoder
+    L.Control.geocoder({ defaultMarkGeocode: false })
+      .on('markgeocode', function(e) { map.fitBounds(e.geocode.bbox); })
+      .addTo(map);
+
+    // Add Locate Me button
+    const locateControl = L.control({position: 'topleft'});
+    locateControl.onAdd = function() {
+        const btn = L.DomUtil.create('button', 'btn');
+        btn.innerHTML = '📍 Locate Me';
+        btn.style.backgroundColor = 'white';
+        btn.style.border = '2px solid rgba(0,0,0,0.2)';
+        btn.style.cursor = 'pointer';
+        btn.style.padding = '5px 8px';
+        btn.style.borderRadius = '4px';
+        btn.onclick = function() { map.locate({setView: true, maxZoom: 16}); };
+        return btn;
+    };
+    locateControl.addTo(map);
+
+    // 2. Initialize Draw capabilities
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+        draw: {
+            polyline: false, rectangle: false, circle: false, marker: false, circlemarker: false,
+            polygon: {
+                allowIntersection: false,
+                drawError: { color: '#e1e100', message: '<strong>Oh snap!</strong> you can\'t draw that!' },
+                shapeOptions: { color: '#fbbf24', weight: 3, fillOpacity: 0.3 }
+            }
+        },
+        edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+
+    let currentAcres = null;
+    let currentLayoutPref = "Grid Layout";
+
+    // 3. Handle Drawn Polygon Area
+    map.on(L.Draw.Event.CREATED, function (e) {
+        drawnItems.clearLayers();
+        const layer = e.layer;
+        drawnItems.addLayer(layer);
+        
+        // Leaflet area calculation returns square meters
+        const latlngs = layer.getLatLngs()[0];
+        const areaSqMeters = L.GeometryUtil.geodesicArea(latlngs);
+        
+        // 1 sq meter = 0.000247105 acres
+        currentAcres = (areaSqMeters * 0.000247105).toFixed(2);
+        
+        // Guard against massive drawings crashing AI limits
+        if(currentAcres > 100000) currentAcres = 100000;
+        
+        document.getElementById('acres_display').innerText = currentAcres + ' Acres';
+    });
+
+    // 4. UI Toggle Layouts
+    function setLayout(pref, btnElement) {
+        currentLayoutPref = pref;
+        document.querySelectorAll('.layout-btn').forEach(btn => {
+            btn.style.backgroundColor = '#f8fafc';
+            btn.style.color = '#475569';
+            btn.style.borderColor = '#cbd5e1';
+            btn.style.boxShadow = 'none';
+        });
+        btnElement.style.backgroundColor = 'var(--primary)';
+        btnElement.style.color = 'white';
+        btnElement.style.borderColor = 'var(--primary)';
+        btnElement.style.boxShadow = '0 4px 6px -1px rgba(22, 163, 74, 0.4)';
+    }
+
+    // Default select Grid Layout
+    document.querySelector('.layout-btn').click();
+
+    // ── Crop Visual Library ────────────────────────────────────────
+    const CROP_VISUALS = {
+        'Corn':      { emoji:'🌽', glow:'rgba(22,163,74,0.6)',  stalkColor:'#15803d', canopyColor:'#4ade80', canopyShape:'tall',   canopySize:1.2 },
+        'Tomato':    { emoji:'🍅', glow:'rgba(239,68,68,0.6)',  stalkColor:'#b91c1c', canopyColor:'#f87171', canopyShape:'round',  canopySize:1.0 },
+        'Wheat':     { emoji:'🌾', glow:'rgba(234,179,8,0.5)',  stalkColor:'#854d0e', canopyColor:'#fde047', canopyShape:'wisp',   canopySize:0.7 },
+        'Rice':      { emoji:'🌾', glow:'rgba(52,211,153,0.5)', stalkColor:'#065f46', canopyColor:'#6ee7b7', canopyShape:'wisp',   canopySize:0.8 },
+        'Sugarcane': { emoji:'🎋', glow:'rgba(132,204,22,0.6)', stalkColor:'#3f6212', canopyColor:'#bef264', canopyShape:'tall',   canopySize:1.4 },
+        'Cotton':    { emoji:'🪴', glow:'rgba(226,232,240,0.7)',stalkColor:'#475569', canopyColor:'#f1f5f9', canopyShape:'round',  canopySize:1.0 },
+        'Soybean':   { emoji:'🫘', glow:'rgba(163,230,53,0.5)', stalkColor:'#3a5c0e', canopyColor:'#a3e635', canopyShape:'bush',   canopySize:0.9 },
+        'Maize':     { emoji:'🌽', glow:'rgba(250,204,21,0.6)', stalkColor:'#713f12', canopyColor:'#fbbf24', canopyShape:'tall',   canopySize:1.1 },
+        'Onion':     { emoji:'🧅', glow:'rgba(192,132,252,0.5)',stalkColor:'#6b21a8', canopyColor:'#d8b4fe', canopyShape:'bulb',   canopySize:0.7 },
+        'Garlic':    { emoji:'🧄', glow:'rgba(226,232,240,0.6)',stalkColor:'#64748b', canopyColor:'#e2e8f0', canopyShape:'bulb',   canopySize:0.6 },
+        'Marigold':  { emoji:'🌼', glow:'rgba(249,115,22,0.7)', stalkColor:'#9a3412', canopyColor:'#fb923c', canopyShape:'flower', canopySize:0.8 },
+        'Groundnut': { emoji:'🥜', glow:'rgba(217,119,6,0.6)',  stalkColor:'#78350f', canopyColor:'#fbbf24', canopyShape:'bush',   canopySize:0.8 },
+        'Mustard':   { emoji:'🌿', glow:'rgba(254,240,138,0.6)',stalkColor:'#713f12', canopyColor:'#fef08a', canopyShape:'wisp',   canopySize:0.9 },
+        'Chickpea':  { emoji:'🫘', glow:'rgba(253,230,138,0.5)',stalkColor:'#92400e', canopyColor:'#fde68a', canopyShape:'bush',   canopySize:0.8 },
+        'Potato':    { emoji:'🥔', glow:'rgba(167,139,250,0.5)',stalkColor:'#4c1d95', canopyColor:'#c4b5fd', canopyShape:'round',  canopySize:0.9 },
+        'Sunflower': { emoji:'🌻', glow:'rgba(251,191,36,0.7)', stalkColor:'#713f12', canopyColor:'#fbbf24', canopyShape:'flower', canopySize:1.2 },
+        'default':   { emoji:'🌱', glow:'rgba(74,222,128,0.5)', stalkColor:'#166534', canopyColor:'#4ade80', canopyShape:'round',  canopySize:1.0 },
+    };
+
+    function getVisual(type) { return CROP_VISUALS[type] || CROP_VISUALS['default']; }
+
+    // Build 2D plant node (emoji badge + glowing aura)
+    function make2DPlant(cell) {
+        const v = getVisual(cell.type);
+        const r = cell.radius;
+        const el = document.createElement('div');
+        el.className = 'plant-node';
+        el.title = `${v.emoji} ${cell.type}`;
+        el.style.cssText = `
+            position:absolute;
+            left:${cell.x - r}px; top:${cell.y - r}px;
+            width:${r*2}px; height:${r*2}px;
+            border-radius:50%;
+            background:radial-gradient(circle at 38% 35%, ${v.canopyColor}, ${cell.color});
+            --glow:${v.glow};
+            box-shadow:0 0 8px 3px ${v.glow}, inset 0 0 5px rgba(255,255,255,0.3);
+            animation:pulse-glow ${1.8 + Math.random()}s ease-in-out infinite;
+            display:flex;align-items:center;justify-content:center;
+            font-size:${Math.max(8,r*0.9)}px;
+            cursor:pointer;
+            z-index:2;
+        `;
+        el.textContent = r > 9 ? v.emoji : '';
+        return el;
+    }
+
+    // Build 3D plant node (shadow disc + stalk + canopy shape)
+    function make3DPlant(cell) {
+        const v = getVisual(cell.type);
+        const r = cell.radius;
+        const hM = cell.height_m || 1.0;
+        const stalkH = Math.max(14, hM * 18);  // px
+        const canopyR = r * v.canopySize;
+
+        const wrap = document.createElement('div');
+        wrap.title = `${v.emoji} ${cell.type}`;
+        wrap.style.cssText = `
+            position:absolute;
+            left:${cell.x - r}px; top:${cell.y - r}px;
+            width:${r*2}px; height:${r*2}px;
+            transform-style:preserve-3d;
+        `;
+
+        // Ground shadow disc
+        const shadow = document.createElement('div');
+        shadow.style.cssText = `
+            position:absolute; inset:0; border-radius:50%;
+            background:radial-gradient(circle, rgba(0,0,0,0.35) 0%, transparent 75%);
+        `;
+        wrap.appendChild(shadow);
+
+        // Stalk  
+        const stalk = document.createElement('div');
+        const stalkW = Math.max(3, r * 0.28);
+        stalk.style.cssText = `
+            position:absolute;
+            left:50%; bottom:40%;
+            width:${stalkW}px; height:${stalkH}px;
+            margin-left:${-stalkW/2}px;
+            background:linear-gradient(to top, ${v.stalkColor}, ${v.canopyColor});
+            border-radius:${stalkW}px;
+            transform:rotateX(-90deg);
+            transform-style:preserve-3d;
+            transform-origin:bottom center;
+            --h:${stalkH}px;
+            animation:sway ${2 + Math.random()*2}s ease-in-out infinite;
+        `;
+        wrap.appendChild(stalk);
+
+        // Canopy (shape varies by crop type)
+        const canopy = document.createElement('div');
+        const cs = v.canopyShape;
+        let canopyCSS = '';
+        if (cs === 'tall') {
+            canopyCSS = `
+                width:${canopyR*1.2}px; height:${canopyR*2.5}px;
+                border-radius:50% 50% 20% 20%;
+                left:${r - canopyR*0.6}px;
+                background:radial-gradient(ellipse at 40% 30%, ${v.canopyColor}, ${v.stalkColor});
+            `;
+        } else if (cs === 'flower') {
+            canopyCSS = `
+                width:${canopyR*2.2}px; height:${canopyR*2.2}px;
+                border-radius:50%;
+                left:${r - canopyR*1.1}px;
+                background:radial-gradient(circle at 40% 40%, #fef9c3, ${v.canopyColor} 55%, ${v.stalkColor});
+                box-shadow:0 0 8px 4px ${v.glow};
+            `;
+        } else if (cs === 'bulb') {
+            canopyCSS = `
+                width:${canopyR*1.5}px; height:${canopyR*1.8}px;
+                border-radius:50% 50% 40% 40%;
+                left:${r - canopyR*0.75}px;
+                background:radial-gradient(ellipse at 40% 30%, #ffffffaa, ${v.canopyColor});
+            `;
+        } else if (cs === 'wisp') {
+            canopyCSS = `
+                width:${canopyR}px; height:${canopyR*2}px;
+                border-radius:50% 50% 20% 20%;
+                left:${r - canopyR*0.5}px;
+                background:linear-gradient(to top, ${v.stalkColor}, ${v.canopyColor});
+            `;
+        } else {  // round / bush default
+            canopyCSS = `
+                width:${canopyR*2}px; height:${canopyR*2}px;
+                border-radius:50%;
+                left:${r - canopyR}px;
+                background:radial-gradient(circle at 38% 32%, ${v.canopyColor}, ${v.stalkColor});
+            `;
+        }
+        canopy.style.cssText = `
+            position:absolute;
+            bottom:${r*0.55 + stalkH*0.72}px;
+            transform:rotateX(-90deg) translateZ(0);
+            transform-style:preserve-3d;
+            transform-origin:bottom center;
+            ${canopyCSS}
+        `;
+        wrap.appendChild(canopy);
+        return wrap;
+    }
+
+    // 5. Generate Logic
+    function generateTwin() {
+        const crop = document.getElementById('main_crop').value;
+        const container2D = document.getElementById('grid-layout-container');
+        const container3D = document.getElementById('isometric-floor');
+        const analysisDiv = document.getElementById('analysis_result');
+        const legendPanel = document.getElementById('legend-panel');
+
+        container2D.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3rem;color:#16a34a;font-weight:bold;">🌱 Growing Layout...</div>';
+
+        // Reset 3D floor (keep barn/tank)
+        container3D.innerHTML = `
+            <div style="position:absolute;inset:0;border-radius:14px;border:6px solid #5c3d1a;box-shadow:inset 0 0 30px rgba(0,0,0,0.2);"></div>
+            <div style="position:absolute;top:-70px;right:30px;width:55px;height:55px;background:radial-gradient(circle at 35% 35%,#60a5fa,#1d4ed8);border-radius:50%;box-shadow:-5px 8px 20px rgba(0,0,0,0.4);transform:translateZ(60px);z-index:20;"></div>
+            <div style="position:absolute;top:-92px;right:12px;font-size:0.6rem;font-weight:700;color:#1d4ed8;transform:translateZ(60px);z-index:20;">💧 Tank</div>
+            <div style="position:absolute;top:-130px;right:100px;width:90px;height:70px;background:linear-gradient(180deg,#b45309,#92400e);border-radius:4px;box-shadow:-6px 10px 25px rgba(0,0,0,0.45);transform:translateZ(55px);z-index:20;">
+                <div style="position:absolute;top:-22px;left:-6px;right:-6px;height:26px;background:linear-gradient(160deg,#dc2626,#991b1b);clip-path:polygon(0 100%,50% 0,100% 100%);border-radius:2px;"></div>
+                <div style="position:absolute;bottom:0;left:30%;width:40%;height:55%;background:#451a03;border-radius:2px 2px 0 0;"></div>
+            </div>
+        `;
+        analysisDiv.style.display = 'none';
+        legendPanel.style.display = 'none';
+
+        fetch("/spatial-planner", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                main_crop: crop,
+                layout_preference: currentLayoutPref,
+                acres: currentAcres ? parseFloat(currentAcres) : null,
+                width: 800,
+                height: 500
+            })
+        }).then(async r => {
+            if (!r.ok) { const t = await r.text(); throw new Error(`Server ${r.status}: ${t}`); }
+            return r.json();
+        }).then(data => {
+            if (data.error) { alert(data.error); return; }
+            if (!data.layout || !Array.isArray(data.layout)) throw new Error("No layout array: " + JSON.stringify(data));
+
+            container2D.innerHTML = '';
+
+            // ── Soil background overlay on 2D ──
+            const soilBg = document.createElement('div');
+            soilBg.style.cssText = 'position:absolute;inset:0;background:repeating-conic-gradient(#d6c8a0 0% 25%,#c4b480 25% 50%) 0 0/30px 30px;border-radius:8px;opacity:0.25;';
+            container2D.appendChild(soilBg);
+
+            // ── Zone bands (2D) ──
+            if (data.zones) data.zones.forEach(zone => {
+                const zd = document.createElement('div');
+                zd.style.cssText = `position:absolute;left:${zone.x}px;top:${zone.y}px;width:${zone.w}px;height:${zone.h}px;background:${zone.color};opacity:0.08;border-right:2px dashed ${zone.color};`;
+                container2D.appendChild(zd);
+                // Zone label
+                const zl = document.createElement('div');
+                zl.textContent = getVisual(zone.crop).emoji + ' ' + zone.crop;
+                zl.style.cssText = `position:absolute;left:${zone.x+8}px;top:8px;font-size:0.75rem;font-weight:700;color:${zone.color};opacity:0.9;text-shadow:0 1px 2px #fff;`;
+                container2D.appendChild(zl);
+            });
+
+            // ── Plant nodes ──
+            // Build legend map
+            const seenCrops = {};
+
+            data.layout.forEach(cell => {
+                seenCrops[cell.type] = cell.color;
+                container2D.appendChild(make2DPlant(cell));
+                container3D.appendChild(make3DPlant(cell));
+            });
+
+            // ── Legend ──
+            legendPanel.style.display = 'flex';
+            legendPanel.innerHTML = '<strong style="font-size:0.9rem;color:#475569;margin-right:6px;">Legend:</strong>';
+            Object.entries(seenCrops).forEach(([name, color]) => {
+                const v = getVisual(name);
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `<div class="legend-dot" style="background:${color};"></div>${v.emoji} ${name}`;
+                legendPanel.appendChild(item);
+            });
+
+            // ── Analysis panel ──
+            analysisDiv.style.display = 'block';
+            let htmlOut = '';
+            let formattedAnalysis = (data.analysis||'').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--primary);">$1</strong>').replace(/\n/g,'<br>');
+            htmlOut += `<div style="margin-bottom:16px;">${formattedAnalysis}</div>`;
+            if (data.insights) {
+                htmlOut += `
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+                    <span style="background:#eef2ff;color:#4f46e5;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">🌱 ${data.insights.total_plants} Plants</span>
+                    <span style="background:#f0fdf4;color:#16a34a;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">🌍 ${data.insights.land_efficiency}% Land Eff.</span>
+                    <span style="background:#ecfeff;color:#0891b2;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">💧 ${data.insights.water_saving_pct}% Water Saved</span>
+                    <span style="background:#fdf4ff;color:#c026d3;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">🚀 ${data.insights.yield_boost_pct}% Yield Boost</span>
+                </div>
+                <div style="background:#fff;padding:14px;border-radius:8px;border:1px solid #e2e8f0;">
+                    <h4 style="margin:0 0 8px;color:#475569;">⚡ Agronomic Actions</h4>
+                    <ul style="margin:0;padding-left:18px;color:#334155;font-size:0.94rem;">
+                        ${data.insights.action_items.map(a=>`<li style="margin-bottom:4px;">${a}</li>`).join('')}
+                    </ul>
+                </div>`;
+            }
+            analysisDiv.innerHTML = htmlOut;
+        }).catch(err => {
+            console.error(err);
+            container2D.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:red;font-weight:bold;">${err.message}</div>`;
+        });
+    }
+
+    // 6. Interactive 3D Rotation and Zoom
+    const wrapper3D = document.getElementById('isometric-wrapper');
+    const floor3D = document.getElementById('isometric-floor');
+    
+    let isDragging3D = false;
+    let currentX = -45; // rotateZ
+    let currentY = 60;  // rotateX
+    let currentZoom = 1;
+
+    function applyTransform() {
+        floor3D.style.transform = `scale(${currentZoom}) rotateX(${currentY}deg) rotateZ(${currentX}deg)`;
+    }
+
+    function resetView() {
+        currentX = -45; currentY = 60; currentZoom = 1;
+        applyTransform();
+    }
+
+    wrapper3D.addEventListener('mousedown', (e) => {
+        isDragging3D = true;
+        wrapper3D.style.cursor = 'grabbing';
+    });
+    
+    window.addEventListener('mouseup', () => {
+        isDragging3D = false;
+        wrapper3D.style.cursor = 'grab';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging3D) return;
+        const deltaX = e.movementX;
+        const deltaY = e.movementY;
+        
+        currentX += deltaX * 0.5;
+        currentY -= deltaY * 0.5;
+        // Clamp Y (rotateX) between 0 and 85 to prevent floor from flipping over
+        currentY = Math.max(0, Math.min(85, currentY)); 
+        applyTransform();
+    });
+
+    wrapper3D.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        currentZoom += e.deltaY * -0.001;
+        currentZoom = Math.max(0.4, Math.min(3.0, currentZoom)); // clamp scale
+        applyTransform();
+    });
+
+</script>
+{% endblock %}

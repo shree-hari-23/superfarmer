@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <h2>📅 Step 3: Crop Plan Dashboard</h2>
+    <p>Our Planner Agent has generated a tailored schedule for your crop.</p>
+
+    {% if plan %}
+    <div style="background: white; border-radius: 8px; border: 1px solid #ddd; padding: 20px; margin-top: 20px;">
+        <h3 style="border-bottom: 2px solid var(--primary); padding-bottom: 10px;">Plan: {{ plan.crop_name }}</h3>
+
+        <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <strong>Status:</strong>
+                <span
+                    style="display:inline-block; padding: 4px 8px; background: #e0f2f1; color: #00796b; border-radius: 4px; font-weight: bold;">{{
+                    plan.status|default('Active') }}</span>
+            </div>
+            <div>
+                <strong>Sowing:</strong>
+                <p>{{ plan.sowing_schedule }}</p>
+            </div>
+            <div>
+                <strong>Irrigation:</strong>
+                <p>{{ plan.irrigation_plan }}</p>
+            </div>
+            <div>
+                <strong>Fertilizer:</strong>
+                <p>{{ plan.fertilizer_schedule }}</p>
+            </div>
+            <div>
+                <strong>Pest Alerts:</strong>
+                <p style="color: var(--danger);">{{ plan.pest_alerts }}</p>
+            </div>
+            <div>
+                <strong>Harvest:</strong>
+                <p>{{ plan.harvest_timeline }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{{ url_for('disease') }}" class="btn">Proceed to Disease Diagnosis &gt;&gt;</a>
+    </div>
+
+    {% else %}
+    <p style="color: var(--warning);">No plan active. Please generate a recommendation first.</p>
+    <a href="{{ url_for('recommendation') }}" class="btn">Go Back</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <h2>🌾 Step 2: Crop Recommendation</h2>
+    <p>Provide current soil and climatic parameters. Our Recommendation Agent will analyze and suggest the best crops.
+    </p>
+
+    <form method="POST">
+        <div class="form-group">
+            <label for="soil_type">Soil Type</label>
+            <select id="soil_type" name="soil_type">
+                <option value="Black">Black Soil</option>
+                <option value="Red">Red Soil</option>
+                <option value="Alluvial">Alluvial</option>
+                <option value="Laterite">Laterite</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="water_const">Water Constraint</label>
+            <select id="water_const" name="water_const">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="n">Nitrogen (N) mg/kg</label>
+            <input type="number" id="n" name="n" value="45" required>
+        </div>
+        <div class="form-group">
+            <label for="p">Phosphorus (P) mg/kg</label>
+            <input type="number" id="p" name="p" value="25" required>
+        </div>
+        <div class="form-group">
+            <label for="k">Potassium (K) mg/kg</label>
+            <input type="number" id="k" name="k" value="80" required>
+        </div>
+        <div class="form-group">
+            <label for="temp">Temperature (°C)</label>
+            <input type="number" id="temp" name="temp" value="28" required>
+        </div>
+        <div class="form-group">
+            <label for="rain">Avg Rainfall (mm)</label>
+            <input type="number" id="rain" name="rain" value="100" required>
+        </div>
+        <div class="form-group full-width">
+            <button type="submit" class="btn">Get Recommendation</button>
+        </div>
+    </form>
+
+    {% if recommendations %}
+    <div class="result-box">
+        <h3>Recommended Crops:</h3>
+        <p style="font-size: 1.2rem; font-weight: bold; color: var(--primary);">{{ recommendations }}</p>
+
+        <form action="{{ url_for('plan') }}" method="POST" style="margin-top: 20px; display: block;">
+            <input type="hidden" name="crop_name" value="{{ recommendations.split(',')[0] }}">
+            <button type="submit" class="btn btn-secondary">Generate Plan for 1st Option</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

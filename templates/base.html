@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SuperFarmer — AI-powered agricultural intelligence for Indian farmers. Crop recommendations, disease diagnosis, weather insights and more.">
+    <title>SuperFarmer - AI Agricultural Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <span>🌿 Super</span>Farmer
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('home') }}">Home</a>
+            {% if session.get('user_id') %}
+            <a href="{{ url_for('intake') }}">Profile</a>
+            <a href="{{ url_for('recommendation') }}">Crops</a>
+            <a href="{{ url_for('plan') }}">Planner</a>
+            <a href="{{ url_for('disease') }}">Disease AI</a>
+            <a href="{{ url_for('chat') }}">AI Advisor</a>
+            <a href="{{ url_for('weather') }}">Weather</a>
+            <a href="{{ url_for('spatial_planner') }}">Spatial Twin</a>
+            <a href="{{ url_for('yield_comparison') }}">Yield Compare</a>
+            <a href="{{ url_for('report') }}">Reports</a>
+            <a href="{{ url_for('logout') }}" class="nav-logout">Logout</a>
+            {% else %}
+            <a href="{{ url_for('login') }}">Login</a>
+            <a href="{{ url_for('signup') }}" class="btn-nav-signup">Sign Up</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

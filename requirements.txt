@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+starlette
+itsdangerous
+werkzeug
+scikit-learn
+pandas
+numpy
+joblib
+requests
+python-dotenv
+google-generativeai
+Pillow
+transformers
+torch
+smolagents[litellm]

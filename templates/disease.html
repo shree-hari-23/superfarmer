@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <h2 style="color: var(--primary);">Disease &amp; Pest Auto-Diagnosis</h2>
+    <p style="margin-bottom: 2rem;">Describe your crop's symptoms or upload an image — our AI Vision Agent will identify the pathology and recommend treatment with direct purchase links.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <div>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group full-width" style="position: relative;">
+                    <label for="leaf_text">Symptom Description</label>
+                    <textarea id="leaf_text" name="leaf_text" rows="4"
+                        placeholder="Example: The lower leaves on my tomato plant are turning pale yellow with dark brown concentric rings..."></textarea>
+                    <button type="button" id="micBtn"
+                        style="position: absolute; right: 10px; bottom: 10px; background: #e2e8f0; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;"
+                        title="Tap to Speak">
+                        🎤
+                    </button>
+                </div>
+
+                <div class="form-group full-width" style="margin-top: 1rem;">
+                    <label for="leaf_image">Upload Leaf Image</label>
+                    <input type="file" id="leaf_image" name="leaf_image" accept="image/*">
+                </div>
+
+                <div class="form-group full-width" style="margin-top: 1rem;">
+                    <button type="submit" class="btn" style="width: 100%;">Run AI Diagnosis</button>
+                </div>
+            </form>
+        </div>
+
+        <div>
+            {% if diagnosis %}
+            <div style="background-color: #f0fdf4; border-left: 4px solid var(--primary); padding: 1.5rem; border-radius: 8px; height: 100%;">
+                <h3 style="margin-bottom: 1rem; color: #166534;">Diagnosis Result</h3>
+                
+                {% if diagnosis.error %}
+                    <div style="color: #dc2626; font-weight: 600;">{{ diagnosis.error }}</div>
+                {% else %}
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Primary Suspect:</strong> <span style="color: #b91c1c; font-weight: 600;">{{ diagnosis.diagnosis }}</span>
+                        <div style="font-size: 0.9em; color: #475569; margin-top: 0.3rem;">Reliability/Confidence: {{ diagnosis.confidence }}</div>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <strong style="color: #1e40af;">Treatment Plan:</strong>
+                        <div style="margin-top: 0.3rem; line-height: 1.5; white-space: pre-wrap;">{{ diagnosis.treatment }}</div>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <strong style="color: #854d0e;">Prevention Measures:</strong>
+                        <div style="margin-top: 0.3rem; line-height: 1.5; white-space: pre-wrap;">{{ diagnosis.prevention }}</div>
+                    </div>
+
+                    {% if diagnosis.products and diagnosis.products | length > 0 %}
+                    <strong style="color: #166534; display: block; margin-bottom: 0.8rem;">Recommended Products:</strong>
+                    <div style="display: grid; gap: 1rem;">
+                        {% for prod in diagnosis.products %}
+                        <div style="background: #ffffff; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 6px;">
+                            <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 0.2rem;">{{ prod.name }}</div>
+                            <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">{{ prod.type }} &nbsp;•&nbsp; {{ prod.dose }}</div>
+                            
+                            <div style="display: flex; gap: 0.8rem; font-size: 0.9rem; margin-top: 0.8rem;">
+                                {% if prod.amazon %}
+                                <a href="{{ prod.amazon }}" target="_blank" style="color: #d97706; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.3rem;">
+                                    🛒 Amazon India ↗
+                                </a>
+                                {% endif %}
+                                {% if prod.flipkart %}
+                                <a href="{{ prod.flipkart }}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 0.3rem;">
+                                    🛒 Flipkart ↗
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+            {% else %}
+            <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; padding: 1.5rem; border-radius: 8px; height: 100%; display: flex; align-items: center; justify-content: center; color: #64748b; text-align: center;">
+                Awaiting input.<br>AI Engine ready (Groq + Gemini Vision).
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    const micBtn = document.getElementById('micBtn');
+    const leafText = document.getElementById('leaf_text');
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = function () {
+            micBtn.style.backgroundColor = '#fecaca';
+            micBtn.innerHTML = '🛑';
+        };
+        recognition.onresult = function (event) {
+            const transcript = event.results[0][0].transcript;
+            leafText.value = leafText.value + (leafText.value ? ' ' : '') + transcript;
+        };
+        recognition.onerror = function (event) {
+            console.error('Speech recognition error', event.error);
+        };
+        recognition.onend = function () {
+            micBtn.style.backgroundColor = '#e2e8f0';
+            micBtn.innerHTML = '🎤';
+        };
+        micBtn.addEventListener('click', () => {
+            if (micBtn.innerHTML === '🛑') {
+                recognition.stop();
+            } else {
+                try { recognition.start(); } catch (e) { console.error(e); }
+            }
+        });
+    } else {
+        micBtn.style.display = 'none';
+    }
+</script>
+{% endblock %}

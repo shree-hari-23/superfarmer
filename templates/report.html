@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card">
+    <h2>📄 Final Report</h2>
+    <p>The Report Agent has consolidated your session into a final structured advisory.</p>
+
+    <div style="background: #fff; padding: 2rem; border-radius: 8px; border: 1px solid #e0e0e0; margin-top: 2rem;">
+        <pre>{{ report }}</pre>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: right;">
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print / Save as PDF</button>
+        <a href="{{ url_for('home') }}" class="btn">Start New Session</a>
+    </div>
+</div>
+{% endblock %}

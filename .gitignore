@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment secrets
+.env
+
+# IDE & OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Temp / test files
+tmp_*.py
+tmp_*.txt
+ascii_err.txt
+spatial_err.txt
+spatial_out.txt
+query
+test_spatial.json
+test.py
+
+# PDF / Docx (large binaries)
+*.pdf
+*.docx
+
+# ML model cache
+ml/__pycache__/

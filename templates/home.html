@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="hero">
+    <h1>Welcome to <span>SuperFarmer</span> 🌿</h1>
+    <p>A multi-agent AI platform built for Indian farmers — combining machine learning, real-time weather, and Gemini AI to help you grow smarter.</p>
+    <div class="hero-badges">
+        <span class="badge">🤖 Gemini 2.5 Flash</span>
+        <span class="badge">🌦️ Tomorrow.io Weather</span>
+        <span class="badge">🗺️ Spatial Digital Twin</span>
+        <span class="badge">🌐 10 Indian Languages</span>
+        <span class="badge">📊 Yield Optimizer</span>
+    </div>
+    {% if session.get('user_id') %}
+    <a href="{{ url_for('recommendation') }}" class="btn btn-lg">Go to Dashboard →</a>
+    {% else %}
+    <a href="{{ url_for('signup') }}" class="btn btn-lg">Get Started Free →</a>
+    {% endif %}
+</div>
+
+<div class="features-grid">
+    <div class="feature-card">
+        <span class="icon">🌱</span>
+        <h3>Smart Profiling</h3>
+        <p>Our Intake Agent builds your farm's complete profile — land size, location, water access, and goals.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">🌾</span>
+        <h3>Crop Recommendation</h3>
+        <p>Soil NPK, temperature and rainfall analysed by LLaMA 3.3-70B to recommend your top 3 crops.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">📅</span>
+        <h3>Crop Planner</h3>
+        <p>Full sowing schedule, irrigation calendar, fertilizer plan and harvest timeline generated automatically.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">🔍</span>
+        <h3>Disease Diagnosis</h3>
+        <p>Describe symptoms or upload a leaf image. Gemini Vision gives a diagnosis with direct purchase links.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">🌦️</span>
+        <h3>Hyper-Local Weather</h3>
+        <p>3-day precision forecast via Tomorrow.io with actionable harvest and irrigation advice for your location.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">🗺️</span>
+        <h3>Spatial Digital Twin</h3>
+        <p>AI generates a personalised 2D hexagonal field layout based on your soil, water, and location profile.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">📊</span>
+        <h3>Yield Comparison</h3>
+        <p>See exactly how much extra produce optimised intercropping adds — in tons per acre and in rupees.</p>
+    </div>
+    <div class="feature-card">
+        <span class="icon">💬</span>
+        <h3>AI Advisor Chat</h3>
+        <p>Ask anything about crops, pests, markets or schemes in your language. Powered by Gemini with your farm data.</p>
+    </div>
+</div>
+
+{% endblock %}

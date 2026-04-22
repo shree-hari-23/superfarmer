@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h2 style="color: var(--primary); margin-bottom: 0.4rem;">📊 Yield Comparison</h2>
+        <p style="color: #6b7280; margin-bottom: 1.8rem;">
+            Compare how much more produce your farm can generate with an optimized Spatial Twin layout vs. normal unplanned farming.
+        </p>
+
+        <form method="POST" action="{{ url_for('yield_comparison') }}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label for="land_size">Land Size (acres)</label>
+                    <input type="number" id="land_size" name="land_size" class="form-control"
+                           step="0.1" min="0.1" required
+                           value="{{ land_size if land_size else '' }}"
+                           placeholder="e.g. 2.5">
+                </div>
+                <div class="form-group">
+                    <label for="main_crop">Primary Crop</label>
+                    <select id="main_crop" name="main_crop" class="form-control">
+                        {% set crops = ['Rice','Wheat','Maize','Cotton','Sugarcane','Groundnut','Soybean',
+                                        'Chickpea','Pearl Millet','Sorghum','Tomatoes','Corn','Banana',
+                                        'Coconut','Sunflower','Mustard','Finger Millet','Vegetables','Lentil'] %}
+                        {% for c in crops %}
+                        <option value="{{ c }}" {% if main_crop == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="companion_crop">Companion Crop</label>
+                    <select id="companion_crop" name="companion_crop" class="form-control">
+                        {% set companions = ['None','Soybean','Chickpea','Pigeon Peas','Lentil','Clover',
+                                             'Marigolds','Coriander','Beans','Cover Crop'] %}
+                        {% for c in companions %}
+                        <option value="{{ c }}" {% if companion_crop == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn" style="width: 100%; font-size: 1rem; padding: 0.85rem;">
+                🔍 Calculate Yield Comparison
+            </button>
+        </form>
+    </div>
+
+    {% if result %}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem;">
+
+        <!-- Optimized Card -->
+        <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #86efac;
+                    border-radius: 12px; padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">✅</div>
+            <p style="font-size: 0.8rem; color: #16a34a; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin: 0;">Optimized Layout</p>
+            <p style="font-size: 2.5rem; font-weight: 800; color: #15803d; margin: 0.3rem 0;">
+                {{ result.split('Optimized Layout Yield')[1].split('tons/acre')[0].strip().lstrip(':').strip() if 'Optimized Layout Yield' in result else '—' }} <span style="font-size: 1rem;">tons/acre</span>
+            </p>
+            <p style="color: #166534; font-size: 0.9rem; margin: 0;">Spatial Twin intercropping method</p>
+        </div>
+
+        <!-- Normal Card -->
+        <div style="background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid #fdba74;
+                    border-radius: 12px; padding: 1.5rem; text-align: center;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+            <p style="font-size: 0.8rem; color: #c2410c; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; margin: 0;">Normal Layout</p>
+            <p style="font-size: 2.5rem; font-weight: 800; color: #9a3412; margin: 0.3rem 0;">
+                {{ result.split('Normal Layout Yield')[1].split('tons/acre')[0].strip().lstrip(':').strip() if 'Normal Layout Yield' in result else '—' }} <span style="font-size: 1rem;">tons/acre</span>
+            </p>
+            <p style="color: #7c2d12; font-size: 0.9rem; margin: 0;">Unplanned traditional farming</p>
+        </div>
+    </div>
+
+    <!-- Full report -->
+    <div class="card">
+        <pre style="font-family: 'Outfit', sans-serif; font-size: 0.95rem; line-height: 1.9;
+                    white-space: pre-wrap; color: #1e293b; margin: 0;">{{ result }}</pre>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
