@@ -6,6 +6,7 @@ import requests
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 import google.generativeai as genai
 import PIL.Image
 from openai import OpenAI
@@ -217,31 +218,92 @@ class WeatherAgent:
 
 class EmailAgent:
     @staticmethod
-    def send_email(to_email, subject, body):
+    def _find_notification_image(provided_path=None):
+        """Locate the notification logo in the images folder or fallback paths."""
+        if provided_path and os.path.exists(provided_path):
+            return provided_path
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        candidates = [
+            os.path.join(base_dir, 'images', 'auth_logo.png'),
+            os.path.join(os.getcwd(), 'images', 'auth_logo.png'),
+            os.path.join(base_dir, 'images', 'ChatGPT Image Sep 9, 2026, 09_53_19 AM.png'),
+            os.path.join(base_dir, 'static', 'images', 'auth_logo.png'),
+            os.path.join(os.getcwd(), 'static', 'images', 'auth_logo.png'),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                return path
+
+        images_dir = os.path.join(base_dir, 'images')
+        if os.path.isdir(images_dir):
+            for fname in os.listdir(images_dir):
+                if fname.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')):
+                    return os.path.join(images_dir, fname)
+
+        return None
+
+    @staticmethod
+    def send_email(to_email, subject, body, image_path=None):
         sender_email = os.environ.get('EMAIL_ADDRESS')
         sender_password = os.environ.get('EMAIL_PASSWORD')
         
         if not sender_email or not sender_password:
-            print("Email credentials not found in environment variables.")
+            print("⚠️ [EmailAgent] Email credentials not found in environment variables (EMAIL_ADDRESS / EMAIL_PASSWORD).")
             return False
             
         try:
-            msg = MIMEMultipart()
+            resolved_image_path = EmailAgent._find_notification_image(image_path)
+
+            # If an image is available and not already referenced in body, auto-prepend logo
+            if resolved_image_path and 'cid:superfarmer_logo' not in body:
+                body = (
+                    '<div style="text-align: center; margin-bottom: 20px;">'
+                    '<img src="cid:superfarmer_logo" alt="SuperFarmer Logo" width="130" style="max-width: 130px; height: auto; border-radius: 50%;" />'
+                    '</div>'
+                ) + body
+
+            # Create related multipart message (RFC 2387) for HTML with inline images
+            msg = MIMEMultipart('related')
             msg['From'] = sender_email
             msg['To'] = to_email
             msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'html'))
-            
+
+            # Alternative part for plain text & HTML
+            msg_alt = MIMEMultipart('alternative')
+            msg.attach(msg_alt)
+
+            # Plain text fallback
+            plain_text = re.sub(r'<[^>]+>', ' ', body)
+            plain_text = re.sub(r'\s+', ' ', plain_text).strip()
+            msg_alt.attach(MIMEText(plain_text, 'plain', 'utf-8'))
+            msg_alt.attach(MIMEText(body, 'html', 'utf-8'))
+
+            # Attach inline image if found
+            if resolved_image_path and os.path.exists(resolved_image_path):
+                with open(resolved_image_path, 'rb') as img_f:
+                    img_data = img_f.read()
+                
+                ext = os.path.splitext(resolved_image_path)[1].lower().replace('.', '')
+                subtype = 'png' if ext == 'png' else ('jpeg' if ext in ('jpg', 'jpeg') else ext)
+                
+                mime_img = MIMEImage(img_data, _subtype=subtype)
+                mime_img.add_header('Content-ID', '<superfarmer_logo>')
+                mime_img.add_header('Content-Disposition', 'inline', filename=os.path.basename(resolved_image_path))
+                msg.attach(mime_img)
+                print(f"   [EmailAgent] Attached inline notification image: {resolved_image_path}")
+
             # Using Gmail's SMTP server
-            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server = smtplib.SMTP('smtp.gmail.com', 587, timeout=20)
             server.starttls()
             server.login(sender_email, sender_password)
             text = msg.as_string()
             server.sendmail(sender_email, to_email, text)
             server.quit()
+            print(f"📧 [EmailAgent] Successfully sent notification email with image to {to_email}")
             return True
         except Exception as e:
-            print(f"Failed to send email: {e}")
+            print(f"❌ [EmailAgent] Failed to send email to {to_email}: {e}")
             return False
 
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -306,6 +368,30 @@ class UserAuthAgent:
             return res['rows'][0]['farmer_id']
         return None
 
+    @staticmethod
+    def get_user_email(user_id):
+        try:
+            sel_res = execute_fluxbase_sql(f"SELECT email FROM users WHERE user_id = {int(user_id)} LIMIT 1")
+            if sel_res.get('rows'):
+                return sel_res['rows'][0]['email']
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def get_user_email_by_farmer_id(farmer_id):
+        try:
+            sel_res = execute_fluxbase_sql(
+                f"SELECT u.email FROM users u "
+                f"JOIN farmer_profile f ON u.user_id = f.user_id "
+                f"WHERE f.farmer_id = {int(farmer_id)} LIMIT 1"
+            )
+            if sel_res.get('rows'):
+                return sel_res['rows'][0]['email']
+        except Exception:
+            pass
+        return None
+
 class IntakeAgent:
     @staticmethod
     def process_intake(user_id, name, land_size, location, water, goals):
@@ -365,6 +451,13 @@ class CropRecommendationAgent:
 
         query = f"INSERT INTO crop_recommendations (farmer_id, recommended_crops) VALUES ({int(farmer_id)}, '{safe_str(rec_str)}');"
         execute_fluxbase_sql(query)
+        try:
+            execute_fluxbase_sql(
+                f"INSERT INTO soil_records (farmer_id, soil_type, nitrogen, phosphorus, potassium, temperature) "
+                f"VALUES ({int(farmer_id)}, '{safe_str(soil_type)}', {float(n)}, {float(p)}, {float(k)}, {float(temp)});"
+            )
+        except Exception as _se:
+            print(f"   [CropRec] Soil record insert note: {_se}")
 
         return {
             "crops_str": rec_str,
@@ -776,7 +869,7 @@ class ReportAgent:
             'rice': 2.5, 'wheat': 1.9, 'maize': 2.2, 'cotton': 0.5,
             'sugarcane': 35.0, 'groundnut': 0.9, 'soybean': 1.0, 'chickpea': 0.7,
             'pigeon peas': 0.6, 'pearl millet': 1.2, 'sorghum': 1.1, 'lentil': 0.6,
-            'tomatoes': 8.0, 'corn': 2.2, 'banana': 15.0, 'coconut': 5.0,
+            'tomatoes': 8.0, 'tomato': 8.0, 'corn': 2.2, 'banana': 15.0, 'coconut': 5.0,
             'sunflower': 0.8, 'mustard': 0.8, 'jute': 2.0, 'finger millet': 1.3,
             'vegetables': 5.0, 'papaya': 12.0, 'sesame': 0.5,
         }
@@ -812,105 +905,69 @@ class ReportAgent:
         opt_total = round(opt_per_acre * land_size, 2)
         norm_total = round(norm_per_acre * land_size, 2)
         extra_tons = round(opt_total - norm_total, 2)
-        extra_inr = int(extra_tons * 15000)
 
         return {
             "base_yield": base,
             "optimized_total": opt_total,
             "normal_total": norm_total,
             "improvement_pct": improvement_pct,
-            "extra_tons": extra_tons,
-            "extra_inr": extra_inr
+            "extra_tons": extra_tons
         }
 
     @staticmethod
-    def _compress_to_5_6_lines(farmer_name, location, land_size, water, goals,
-                                soil_type, soil_npk, rec_crops, crop_name, plan,
-                                spatial_main, spatial_comp, spatial_mode, spatial_score,
-                                spatial_soil, spatial_yield, weather_brief, yield_metrics,
-                                nutrient_risk):
-        # Deterministic 6 lines corresponding to each required domain
-        l1 = f"Farm Details: {farmer_name}'s {land_size}-acre holding in {location} has {soil_type.lower()} soil with {water.lower()} water availability ({soil_npk})."
-        l2 = f"Crop Recommendation: AI recommends {rec_crops} as optimal choices matching local soil nutrients and regional climate."
-        
-        sow = (plan.get('sowing_schedule') or 'Seasonal schedule based on monsoon')[:60]
-        irrig = (plan.get('irrigation_plan') or 'Scheduled drip irrigation')[:50]
-        pest = (plan.get('pest_alerts') or 'Routine pest vigilance and bio-controls')[:50]
-        l3 = f"Crop Plan ({crop_name}): Sowing window: {sow}; irrigation: {irrig}; pest defense: {pest}."
+    def _generate_grounded_insights(farmer_name, land_size, soil_info, plan_info, spatial_info, disease_info=None):
+        """Generate strictly grounded agronomic recommendations based only on real inputs (NO WEATHER)."""
+        insights = []
+        p_crop = plan_info.get('crop_name')
+        s_main = spatial_info.get('main_crop')
+        s_comp = spatial_info.get('companion_crop')
 
-        l4 = f"Spatial Layout: {spatial_mode} pairing {spatial_main} with {spatial_comp} companion (score: {spatial_score}/100) to optimize sunlight and {spatial_soil.lower()}."
-        
-        wb = (weather_brief or 'Favorable regional forecast; continue scheduled field activities').replace('\n', ' ')[:95]
-        nr_action = nutrient_risk.get('suggested_action') if nutrient_risk else None
-        if nr_action:
-            l5 = f"Weather & Risk: {wb} - Action: {nr_action[:65]}."
-        else:
-            l5 = f"Weather & Risk: {wb} - maintain regular soil moisture and weed surveillance."
-
-        yt = spatial_yield or yield_metrics.get('optimized_total', 2.5)
-        boost = yield_metrics.get('improvement_pct', 22.0)
-        extra_t = yield_metrics.get('extra_tons', 0.5)
-        extra_inr = yield_metrics.get('extra_inr', 15000)
-        l6 = f"Yield & Profit: Projected harvest of {yt} tonnes (+{boost}% over traditional monoculture, +{extra_t}t extra), generating ~Rs {extra_inr:,} in additional seasonal profit."
-
-        fallback_lines = [l1, l2, l3, l4, l5, l6]
-
-        # LLM compression attempt
-        context = (
-            f"Farmer: {farmer_name}, Location: {location}, Land: {land_size} acres, Water: {water}, Soil: {soil_type} ({soil_npk})\n"
-            f"AI Recommended Crops: {rec_crops}\n"
-            f"Crop Plan: Crop={crop_name}, Sowing={sow}, Irrigation={irrig}, Pest={pest}\n"
-            f"Spatial Layout: Main={spatial_main}, Companion={spatial_comp}, Mode={spatial_mode}, Score={spatial_score}/100, Soil Impact={spatial_soil}\n"
-            f"Weather: {weather_brief}\n"
-            f"Yield & Profit: Total={yt} tonnes, Boost=+{boost}%, Extra Produce=+{extra_t} tonnes, Extra Income=+Rs {extra_inr:,}\n"
-            f"Nutrient Risk: {nutrient_risk.get('risk_level', 'Normal')} ({nutrient_risk.get('suggested_action', 'None')})"
-        )
-
-        prompt = f"""You are SuperFarmer's Chief Agronomic Synthesizer.
-Synthesize the collected agricultural data from all specialized agents into an EXACT 5 to 6 line report for the farmer.
-
-STRICT INSTRUCTIONS:
-- You must output EXACTLY 5 or 6 concise lines (Line 1 to Line 6).
-- Include ONLY the most important and useful information for the farmer:
-  Line 1: Farmer/farm details (Name, location, acreage, water, soil)
-  Line 2: Crop recommendation (Top AI recommended crops)
-  Line 3: Crop plan (Sowing window, irrigation schedule, pest management)
-  Line 4: Spatial/farming layout (Layout type, crop companion pairing, efficiency)
-  Line 5: Weather/risk information (Upcoming weather conditions, immediate action/alerts)
-  Line 6: Yield or profit-related insights (Projected harvest tonnes, % gain, extra Rs income)
-- Do NOT include full agent outputs, detailed explanations, PDF content, system architecture, workflows, greetings, or filler.
-- Each line must be a single concise sentence packed with key information.
-
-DATA:
-{context}
-"""
-        try:
-            resp = _call_llm(
-                system_prompt="You are a precision agricultural intelligence summarizer. Output exactly 5 to 6 concise, information-dense lines.",
-                user_message=prompt,
-                label="ReportCompressor"
+        # 1. Soil nutrient insight
+        n_val = soil_info.get('nitrogen')
+        p_val = soil_info.get('phosphorus')
+        k_val = soil_info.get('potassium')
+        if n_val is not None and p_val is not None and k_val is not None:
+            if float(n_val) < 140:
+                insights.append(
+                    f"Soil Nitrogen ({n_val} kg/ha) is low for optimal vegetative growth. "
+                    f"Prioritize split nitrogen application or intercrop with nitrogen-fixing pulses to restore balance."
+                )
+            else:
+                insights.append(
+                    f"Soil NPK reserve (N={n_val}, P={p_val}, K={k_val} kg/ha) supports strong crop establishment for {p_crop or 'cultivation'}."
+                )
+        elif soil_info.get('soil_type'):
+            insights.append(
+                f"For {soil_info.get('soil_type')} soil, apply periodic organic compost to preserve root-zone moisture and organic carbon."
             )
-            if resp:
-                raw_lines = [l.strip() for l in resp.split('\n') if l.strip() and not l.strip().startswith('```')]
-                cleaned = []
-                for l in raw_lines:
-                    c = re.sub(r'^(Line\s*\d+\s*[:\-.]|\d+[\.\)]|\-|\*)\s*', '', l).strip()
-                    c = c.replace('**', '').replace('__', '').strip()
-                    if c:
-                        cleaned.append(c)
-                if 5 <= len(cleaned) <= 6:
-                    print(f"   [ReportCompressor] LLM generated clean {len(cleaned)} lines")
-                    return cleaned
-                elif len(cleaned) > 6:
-                    print(f"   [ReportCompressor] LLM generated {len(cleaned)} lines, trimming to 6")
-                    return cleaned[:6]
-                elif len(cleaned) == 4:
-                    cleaned.append(l6)
-                    return cleaned
-        except Exception as llm_e:
-            print(f"   [ReportCompressor] LLM compression fallback ({llm_e})")
 
-        return fallback_lines
+        # 2. Crop Plan & Sowing / Irrigation
+        if p_crop:
+            sow = plan_info.get('sowing_schedule')
+            if sow and 'not available' not in sow.lower():
+                insights.append(f"Crop Plan ({p_crop}): Follow optimal sowing window ({sow[:70]}) to facilitate uniform germination.")
+            irrig = plan_info.get('irrigation_plan')
+            if irrig and 'not available' not in irrig.lower():
+                insights.append(f"Water Management: Implement {irrig[:80]} to maintain steady root-zone aeration.")
+
+        # 3. Spatial Twin Intercropping Synergy
+        if s_main and s_comp and s_comp.lower() != 'none':
+            insights.append(
+                f"Spatial Layout Synergy: Intercropping {s_main} with {s_comp} maximizes solar canopy interception "
+                f"and provides ecological pest barrier protection via hexagonal grid spacing."
+            )
+
+        # 4. Disease / Pathology
+        if disease_info and disease_info.get('diagnosis'):
+            diag = disease_info.get('diagnosis')
+            treat = disease_info.get('treatment', '')
+            first_treat = treat.split('\n')[0] if treat else 'Targeted bio-control'
+            insights.append(f"Disease Management Alert: Address detected {diag} promptly using recommended treatment: {first_treat[:80]}.")
+
+        if len(insights) < 3:
+            insights.append("Maintain routine weed vigilance and inspect border rows regularly to preserve crop health and maximize yield.")
+
+        return insights[:4]
 
     @staticmethod
     def generate_report(farmer_id=None, **kwargs):
@@ -928,12 +985,13 @@ DATA:
         except (TypeError, ValueError):
             fid = 0
 
+        user_id = kwargs.get('user_id')
         print("\n" + "=" * 60)
-        print("📄 [ReportAgent] Generating concise 5-6 line multi-agent report")
+        print("📄 [ReportAgent] Generating authentic Field Advisory Report (Sections 1-7, No Weather)")
         print(f"   Farmer ID : {fid}")
         print("=" * 60)
 
-        # ── 1. Fetch Profile (IntakeAgent) ───────────────────────────
+        # ── 1. Fetch Profile (IntakeAgent / farmer_profile) ───────────
         profile = {}
         try:
             profile_res = execute_fluxbase_sql(f"SELECT * FROM farmer_profile WHERE farmer_id={fid} LIMIT 1")
@@ -941,127 +999,225 @@ DATA:
         except Exception as e:
             print(f"   [Report] Profile fetch error: {e}")
 
-        farmer_name = profile.get('name') or 'SuperFarmer User'
-        location = profile.get('location') or 'Local Region'
-        land_size = profile.get('land_size', '1.0')
-        water = profile.get('water_availability') or 'Medium'
-        goals = profile.get('farming_goals') or 'Standard yield & profit'
+        farmer_name = profile.get('name') or 'SuperFarmer Farmer'
+        location = profile.get('location') or 'Not specified'
+        land_size_raw = profile.get('land_size')
+        water_avail = profile.get('water_availability') or 'Standard'
+        farming_goals = profile.get('farming_goals') or 'Sustainable yield & profitability'
 
         try:
-            land_size_val = float(land_size)
+            land_size_val = float(land_size_raw) if land_size_raw is not None else 1.0
             if land_size_val <= 0:
                 land_size_val = 1.0
         except (TypeError, ValueError):
             land_size_val = 1.0
 
-        # ── 2. Fetch Soil Records (Soil Data) ────────────────────────
-        soil_data = {}
+        # Retrieve user email for prefilling
+        user_email = ""
+        try:
+            if not user_id and profile.get('user_id'):
+                user_id = profile.get('user_id')
+            if user_id:
+                user_email = UserAuthAgent.get_user_email(user_id) or ""
+            if not user_email and fid:
+                user_email = UserAuthAgent.get_user_email_by_farmer_id(fid) or ""
+        except Exception:
+            pass
+
+        # ── 2. Fetch Soil Records (soil_records) ─────────────────────
+        soil_row = {}
         try:
             soil_res = execute_fluxbase_sql(f"SELECT * FROM soil_records WHERE farmer_id={fid} ORDER BY recorded_at DESC LIMIT 1")
-            soil_data = soil_res['rows'][0] if soil_res.get('rows') else {}
+            soil_row = soil_res['rows'][0] if soil_res.get('rows') else {}
         except Exception as e:
             print(f"   [Report] Soil records fetch error: {e}")
 
-        soil_type = soil_data.get('soil_type') or 'Alluvial / Loamy'
-        soil_n = soil_data.get('nitrogen')
-        soil_p = soil_data.get('phosphorus')
-        soil_k = soil_data.get('potassium')
-        soil_npk_str = f"N={soil_n}, P={soil_p}, K={soil_k} mg/kg" if (soil_n is not None and soil_p is not None and soil_k is not None) else "Balanced regional NPK"
+        # Check kwargs fallback if soil_records was empty
+        session_soil = kwargs.get('soil_data') or {}
+        soil_type = soil_row.get('soil_type') or session_soil.get('soil_type') or 'Loamy'
+        n_val = soil_row.get('nitrogen') if soil_row.get('nitrogen') is not None else session_soil.get('n')
+        p_val = soil_row.get('phosphorus') if soil_row.get('phosphorus') is not None else session_soil.get('p')
+        k_val = soil_row.get('potassium') if soil_row.get('potassium') is not None else session_soil.get('k')
+        ph_val = soil_row.get('ph') # None if not recorded in database
+        moisture_val = soil_row.get('soil_moisture')
+        soil_temp = soil_row.get('temperature') if soil_row.get('temperature') is not None else session_soil.get('temp')
+        soil_recorded_at = soil_row.get('recorded_at')
 
-        # ── 3. Fetch Crop Recommendations (CropRecommendationAgent) ──
-        recommendations = {}
+        soil_info = {
+            'soil_type': soil_type,
+            'nitrogen': n_val,
+            'phosphorus': p_val,
+            'potassium': k_val,
+            'ph': ph_val,
+            'soil_moisture': moisture_val,
+            'temperature': soil_temp,
+            'recorded_at': soil_recorded_at,
+            'has_npk': (n_val is not None and p_val is not None and k_val is not None)
+        }
+
+        # ── 3. Fetch Crop Recommendations (crop_recommendations) ─────
+        rec_row = {}
         try:
             rec_res = execute_fluxbase_sql(f"SELECT * FROM crop_recommendations WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
-            recommendations = rec_res['rows'][0] if rec_res.get('rows') else {}
+            rec_row = rec_res['rows'][0] if rec_res.get('rows') else {}
         except Exception as e:
             print(f"   [Report] Recommendations fetch error: {e}")
 
-        rec_crops = recommendations.get('recommended_crops') or 'Corn, Soybean, Groundnut'
+        rec_crops_str = rec_row.get('recommended_crops') or 'Corn, Soybean, Groundnut'
+        rec_crops_list = [c.strip() for c in rec_crops_str.split(',') if c.strip()]
 
-        # ── 4. Fetch Crop Plan (CropPlannerAgent) ─────────────────────
-        plan = {}
+        rec_factors = []
+        if soil_type:
+            rec_factors.append(f"Soil Texture: {soil_type}")
+        if soil_info['has_npk']:
+            rec_factors.append(f"Nutrient Level: N={n_val}, P={p_val}, K={k_val} kg/ha")
+        if water_avail:
+            rec_factors.append(f"Water Availability: {water_avail}")
+
+        rec_info = {
+            'recommended_crops': rec_crops_list,
+            'crops_str': rec_crops_str,
+            'recommendation_reason': f"Recommended based on {soil_type} soil properties and {water_avail.lower()} irrigation capacity using rule-based agronomic suitability matching.",
+            'factors_used': rec_factors
+        }
+
+        # ── 4. Fetch Crop Plan (crop_plans) ──────────────────────────
+        plan_row = {}
         try:
             plan_res = execute_fluxbase_sql(f"SELECT * FROM crop_plans WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
-            plan = plan_res['rows'][0] if plan_res.get('rows') else {}
+            plan_row = plan_res['rows'][0] if plan_res.get('rows') else {}
         except Exception as e:
             print(f"   [Report] Plan fetch error: {e}")
 
-        crop_name = plan.get('crop_name') or 'Corn'
+        planned_crop = plan_row.get('crop_name') or (rec_crops_list[0] if rec_crops_list else 'Corn')
+        sowing_sched = plan_row.get('sowing_schedule') or 'Seasonal schedule aligned with monsoon onset'
+        irrig_plan = plan_row.get('irrigation_plan') or 'Scheduled drip irrigation per growth stage'
+        fert_sched = plan_row.get('fertilizer_schedule') or 'Split basal dose and vegetative top-dressing'
+        pest_alerts = plan_row.get('pest_alerts') or 'Periodic monitoring for stem borers and foliar pathogens'
+        harvest_time = plan_row.get('harvest_timeline') or 'Standard seasonal maturity timeline'
+        plan_status = plan_row.get('status') or 'Active'
 
-        # ── 5. Fetch Spatial Twin Log (SpatialPlannerAgent) ───────────
-        spatial = {}
+        # Optional disease diagnosis from session
+        last_diag = kwargs.get('last_diagnosis')
+
+        plan_info = {
+            'crop_name': planned_crop,
+            'sowing_schedule': sowing_sched,
+            'irrigation_plan': irrig_plan,
+            'fertilizer_schedule': fert_sched,
+            'pest_alerts': pest_alerts,
+            'harvest_timeline': harvest_time,
+            'status': plan_status,
+            'disease_diagnosis': last_diag if (last_diag and isinstance(last_diag, dict) and last_diag.get('diagnosis')) else None
+        }
+
+        # ── 5. Fetch Spatial Twin Log (spatial_twin_log) ─────────────
+        spatial_row = {}
         try:
             sp_res = execute_fluxbase_sql(f"SELECT * FROM spatial_twin_log WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
-            spatial = sp_res['rows'][0] if sp_res.get('rows') else {}
+            spatial_row = sp_res['rows'][0] if sp_res.get('rows') else {}
         except Exception:
             pass
 
-        spatial_main = spatial.get('main_crop') or crop_name
-        spatial_comp = spatial.get('companion_crop') or ('Soybean' if spatial_main == 'Corn' else 'Marigold')
-        spatial_mode = spatial.get('layout_mode') or 'Hexagonal Staggered Grid'
-        spatial_score = spatial.get('layout_score', 88)
-        spatial_soil = spatial.get('soil_impact') or 'improves soil nitrogen'
-        spatial_yield = spatial.get('total_yield_t')
+        has_spatial = bool(spatial_row)
+        spatial_main = spatial_row.get('main_crop') or planned_crop
+        spatial_comp = spatial_row.get('companion_crop') or ('Soybean' if spatial_main == 'Corn' else 'Marigold')
+        spatial_mode = spatial_row.get('layout_mode') or 'Hexagonal Staggered Grid'
+        if spatial_mode.lower() == 'grid':
+            spatial_mode = 'Hexagonal Staggered Grid'
+        spatial_score = spatial_row.get('layout_score', 88)
+        spatial_soil = spatial_row.get('soil_impact') or 'improves soil nitrogen'
+        spatial_yield_val = spatial_row.get('total_yield_t')
 
-        # ── 6. Fetch Weather Intelligence (WeatherAgent) ──────────────
-        weather_raw = ""
-        weather_brief = "Stable regional weather expected; proceed with regular field operations."
-        if location and location.lower() != 'unknown':
-            try:
-                from agents.agents import WeatherAgent
-                weather_raw = WeatherAgent.analyze_weather(location)
-                if "**Agent Suggestion:**" in weather_raw:
-                    sug = weather_raw.split("**Agent Suggestion:**", 1)[1].strip()
-                    sug_clean = re.sub(r'\*+', '', sug).strip()
-                    weather_brief = f"3-day forecast for {location}: {sug_clean}"
-                elif weather_raw and "failed" not in weather_raw.lower() and "missing" not in weather_raw.lower():
-                    first_lines = [l.strip() for l in weather_raw.split('\n') if l.strip()]
-                    weather_brief = "; ".join(first_lines[:2])
-            except Exception as w_err:
-                print(f"   [Report] Weather fetch error: {w_err}")
+        # Retrieve spacing metadata from SpatialPlannerAgent.CROP_DB
+        main_meta = SpatialPlannerAgent.CROP_DB.get(spatial_main, SpatialPlannerAgent.CROP_DB.get('Corn', {}))
+        comp_meta = SpatialPlannerAgent.CROP_DB.get(spatial_comp, SpatialPlannerAgent.CROP_DB.get('Soybean', {}))
 
-        # ── 7. Fetch Yield & Financial Impact (YieldComparisonAgent) ──
-        yield_metrics = ReportAgent._calculate_yield_metrics(land_size_val, spatial_main, spatial_comp)
-        if not spatial_yield:
-            spatial_yield = yield_metrics.get('optimized_total', 2.5)
+        main_spacing = main_meta.get('spacing', 60)
+        comp_spacing = comp_meta.get('spacing', 30)
+        main_height = main_meta.get('height_m', 2.0)
+        comp_height = comp_meta.get('height_m', 0.8)
 
-        # ── 8. Fetch Nutrient Risk Log ────────────────────────────────
-        nutrient_risk = {}
-        try:
-            nr_res = execute_fluxbase_sql(f"SELECT * FROM nutrient_risk_log WHERE farmer_id={fid} ORDER BY logged_at DESC LIMIT 1")
-            nutrient_risk = nr_res['rows'][0] if nr_res.get('rows') else {}
-        except Exception:
-            pass
-
-        # ── 9. EXCLUDE AI Advisor / Chat Conversations ────────────────
-        # Per explicit instruction: AI Advisor / SuperFarmerChatAgent is NOT included
-
-        # ── 10. Compress all extracted information into 5-6 lines ─────
-        summary_lines = ReportAgent._compress_to_5_6_lines(
-            farmer_name=farmer_name,
-            location=location,
-            land_size=land_size_val,
-            water=water,
-            goals=goals,
-            soil_type=soil_type,
-            soil_npk=soil_npk_str,
-            rec_crops=rec_crops,
-            crop_name=crop_name,
-            plan=plan,
-            spatial_main=spatial_main,
-            spatial_comp=spatial_comp,
-            spatial_mode=spatial_mode,
-            spatial_score=spatial_score,
-            spatial_soil=spatial_soil,
-            spatial_yield=spatial_yield,
-            weather_brief=weather_brief,
-            yield_metrics=yield_metrics,
-            nutrient_risk=nutrient_risk
+        # Solar orientation logic
+        sunlight_note = (
+            f"Taller crop {spatial_main} ({main_height}m) positioned relative to {spatial_comp} ({comp_height}m) "
+            f"to optimize canopy solar interception and prevent shading."
         )
 
-        compressed_summary = "\n".join(summary_lines)
+        # Check for crop discrepancy between plan and spatial twin
+        crops_match = (planned_crop.lower().strip() == spatial_main.lower().strip())
+        crop_sync_note = None
+        if not crops_match:
+            crop_sync_note = (
+                f"Note: Active Crop Plan is configured for {planned_crop}, while the Spatial Twin model "
+                f"was generated for {spatial_main} + {spatial_comp}. Each module reflects your saved work. "
+                f"To align your 3D field layout with your crop plan, run the Spatial Planner for {planned_crop}."
+            )
 
-        # ── 11. Reports history count ────────────────────────────────
+        spatial_info = {
+            'has_spatial': has_spatial,
+            'main_crop': spatial_main,
+            'companion_crop': spatial_comp,
+            'layout_mode': spatial_mode,
+            'layout_score': spatial_score,
+            'soil_impact': spatial_soil,
+            'main_spacing_cm': main_spacing,
+            'comp_spacing_cm': comp_spacing,
+            'sunlight_note': sunlight_note,
+            'land_efficiency_pct': min(95, 75 + int(spatial_score * 0.2)),
+            'nitrogen_balance': 'Legume biological N₂ fixation balances nitrogen uptake' if 'improves' in spatial_soil.lower() or comp_meta.get('nitrogen') == 'Fixer' else 'Balanced nutrient depletion',
+            'algorithm_note': 'Spatial Twin layout is generated using the implemented rule-based spatial planning and hexagonal crop placement algorithm.',
+            'crops_match': crops_match,
+            'crop_sync_note': crop_sync_note
+        }
+
+        # ── 6. Fetch Yield & Farm Efficiency (ONLY real calculated metrics) ─
+        yield_data = None
+        has_yield_data = False
+        if spatial_yield_val is not None and float(spatial_yield_val) > 0:
+            has_yield_data = True
+            opt_yield = round(float(spatial_yield_val), 2)
+            # Baseline monoculture yield estimation
+            metrics = ReportAgent._calculate_yield_metrics(land_size_val, spatial_main, spatial_comp)
+            base_yield = metrics.get('normal_total', round(opt_yield * 0.82, 2))
+            diff_t = round(opt_yield - base_yield, 2)
+            diff_pct = round((diff_t / max(0.1, base_yield)) * 100, 1)
+
+            yield_data = {
+                'has_yield_data': True,
+                'optimized_yield_t': opt_yield,
+                'baseline_yield_t': base_yield,
+                'difference_t': diff_t,
+                'difference_pct': diff_pct,
+                'land_size_acres': land_size_val,
+                'note': f"Estimated total harvest of {opt_yield} tonnes across {land_size_val} acre(s) under optimized companion spacing."
+            }
+        else:
+            yield_data = {
+                'has_yield_data': False,
+                'note': "No yield simulation logged yet. Open the Spatial Planner or Yield Comparison to generate quantitative yield projections."
+            }
+
+        # ── 7. AI Insights & Grounded Recommendations (NO WEATHER) ───
+        ai_insights = ReportAgent._generate_grounded_insights(
+            farmer_name=farmer_name,
+            land_size=land_size_val,
+            soil_info=soil_info,
+            plan_info=plan_info,
+            spatial_info=spatial_info,
+            disease_info=plan_info.get('disease_diagnosis')
+        )
+
+        # ── 8. System Limitations ────────────────────────────────────
+        limitations = [
+            "Yield values are algorithmic estimates derived from published botanical spacing models and intercropping coefficients, not real-time satellite telemetry.",
+            "Spatial layout planning assumes a uniform plot gradient; adjustments must be made on-field for irregular topography, slopes, and drainage channels.",
+            "Soil macronutrient data reflects submitted test records; periodic laboratory soil testing is recommended to calibrate fertilizer requirements.",
+            "No dynamic automated weather telemetry is integrated into this report; verify current regional conditions prior to critical field operations.",
+            "Consult local agricultural extension officers or university farm advisory centers before large-scale implementation of chemical treatments."
+        ]
+
+        # ── 9. Reports count ─────────────────────────────────────────
         report_count = 0
         try:
             rc_res = execute_fluxbase_sql(f"SELECT COUNT(*) as cnt FROM reports WHERE farmer_id={fid}")
@@ -1069,28 +1225,330 @@ DATA:
         except Exception:
             pass
 
-        # Final concise 5-6 line report response containing only key information
+        current_time_str = time.strftime("%d %B %Y, %I:%M %p")
+
+        # ── 10. Summary Lines for Quick Takeaway (NO WEATHER) ─────────
+        s_lines = [
+            f"Farm Details: {farmer_name}'s {land_size_val}-acre holding in {location} has {soil_type.lower()} soil with {water_avail.lower()} water capacity.",
+            f"Crop Recommendation: System recommends {rec_crops_str} based on soil parameters and regional agro-climatic profile.",
+            f"Active Crop Plan: {planned_crop} — sowing window: {sowing_sched[:50]}; irrigation: {irrig_plan[:50]}.",
+            f"Spatial Layout: {spatial_mode} pairing {spatial_main} with {spatial_comp} (layout score: {spatial_score}/100) using hexagonal spacing.",
+        ]
+        if has_yield_data:
+            s_lines.append(f"Yield Impact: Projected harvest of {yield_data['optimized_yield_t']} tonnes (+{yield_data['difference_pct']}% over traditional baseline).")
+        if crop_sync_note:
+            s_lines.append(f"Crop Status Note: Crop plan is configured for {planned_crop}, while spatial twin is modeled for {spatial_main} + {spatial_comp}.")
+
         report_data = {
-            "report": compressed_summary,
-            "lines": summary_lines,
-            "summary_lines": summary_lines,
             "farmer_name": farmer_name,
+            "user_email": user_email,
             "location": location,
             "land_size": str(land_size_val),
-            "generated_at": time.strftime("%d %B %Y, %I:%M %p"),
-            "report_number": report_count + 1
+            "generated_at": current_time_str,
+            "report_number": report_count + 1,
+            "summary_lines": s_lines,
+            "report": "\n".join(s_lines),
+            "sections": {
+                "header": {
+                    "title": "Field Advisory Report",
+                    "farmer_name": farmer_name,
+                    "report_number": report_count + 1,
+                    "generated_at": current_time_str,
+                    "location": location,
+                    "land_size_acres": land_size_val,
+                },
+                "section_1_farmer": {
+                    "title": "Farmer & Farm Details",
+                    "farmer_name": farmer_name,
+                    "land_size_acres": land_size_val,
+                    "location": location,
+                    "soil_type": soil_type,
+                    "nitrogen": n_val,
+                    "phosphorus": p_val,
+                    "potassium": k_val,
+                    "ph": ph_val,
+                    "soil_moisture": moisture_val,
+                    "water_availability": water_avail,
+                    "farming_goals": farming_goals,
+                    "has_npk": soil_info['has_npk']
+                },
+                "section_2_recommendations": {
+                    "title": "Crop Recommendations",
+                    "recommended_crops": rec_crops_list,
+                    "crops_str": rec_crops_str,
+                    "reason": rec_info['recommendation_reason'],
+                    "factors": rec_info['factors_used']
+                },
+                "section_3_crop_plan": {
+                    "title": "Active Crop Plan",
+                    "planned_crop": planned_crop,
+                    "sowing_schedule": sowing_sched,
+                    "irrigation_plan": irrig_plan,
+                    "fertilizer_schedule": fert_sched,
+                    "pest_alerts": pest_alerts,
+                    "harvest_timeline": harvest_time,
+                    "status": plan_status,
+                    "disease_diagnosis": plan_info['disease_diagnosis']
+                },
+                "section_4_spatial_twin": {
+                    "title": "Spatial Twin / Farm Layout",
+                    "main_crop": spatial_main,
+                    "companion_crop": spatial_comp,
+                    "layout_mode": spatial_mode,
+                    "layout_score": spatial_score,
+                    "main_spacing_cm": main_spacing,
+                    "comp_spacing_cm": comp_spacing,
+                    "sunlight_note": sunlight_note,
+                    "land_efficiency_pct": spatial_info['land_efficiency_pct'],
+                    "nitrogen_balance": spatial_info['nitrogen_balance'],
+                    "algorithm_note": spatial_info['algorithm_note'],
+                    "crops_match": crops_match,
+                    "crop_sync_note": crop_sync_note
+                },
+                "section_5_yield_efficiency": {
+                    "title": "Yield & Farm Efficiency",
+                    "has_yield_data": has_yield_data,
+                    "data": yield_data
+                },
+                "section_6_ai_insights": {
+                    "title": "AI Insights & Grounded Recommendations",
+                    "insights": ai_insights
+                },
+                "section_7_limitations": {
+                    "title": "System Limitations & Agronomic Notes",
+                    "items": limitations
+                }
+            }
         }
 
         # Save to reports table in Fluxbase
         try:
-            safe_text = compressed_summary.replace("'", "''")
+            safe_text = "\n".join(s_lines).replace("'", "''")
             execute_fluxbase_sql(f"INSERT INTO reports (farmer_id, report_text) VALUES ({fid}, '{safe_text}')")
         except Exception as insert_err:
             print(f"   [Report] DB save error: {insert_err}")
 
-        print(f"   ✅ Final report ready: exactly {len(summary_lines)} lines")
+        print(f"   ✅ Field Advisory Report synthesized successfully (7 Sections, No Weather)")
         print("=" * 60 + "\n")
         return report_data
+
+    @staticmethod
+    def build_html_email(report_data: dict, custom_notes: str = "") -> str:
+        """Generate a professionally styled, responsive HTML email containing all 7 report sections (NO WEATHER)."""
+        sections = report_data.get('sections', {})
+        header = sections.get('header', {})
+        s1 = sections.get('section_1_farmer', {})
+        s2 = sections.get('section_2_recommendations', {})
+        s3 = sections.get('section_3_crop_plan', {})
+        s4 = sections.get('section_4_spatial_twin', {})
+        s5 = sections.get('section_5_yield_efficiency', {})
+        s6 = sections.get('section_6_ai_insights', {})
+        s7 = sections.get('section_7_limitations', {})
+
+        # Build custom note block if provided
+        notes_block = ""
+        if custom_notes:
+            notes_block = f"""
+            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 18px; border-radius: 6px; margin: 18px 0 24px 0;">
+                <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase;">Message from Sender</p>
+                <p style="margin: 0; font-size: 14px; color: #1e293b; line-height: 1.5;">{custom_notes}</p>
+            </div>
+            """
+
+        # Section 1: Farmer & Farm Details
+        npk_display = f"N={s1.get('nitrogen')} | P={s1.get('phosphorus')} | K={s1.get('potassium')} mg/kg" if s1.get('has_npk') else "Pending laboratory test"
+        ph_display = f"<br><b>Soil pH:</b> {s1.get('ph')}" if s1.get('ph') is not None else ""
+
+        # Section 2: Recommended crops badges
+        rec_badges = " ".join([f"<span style='display: inline-block; background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; margin: 2px 4px 2px 0; border: 1px solid #86efac;'>{c}</span>" for c in s2.get('recommended_crops', [])])
+
+        # Section 3: Crop Plan
+        disease_block = ""
+        diag = s3.get('disease_diagnosis')
+        if diag and isinstance(diag, dict) and diag.get('diagnosis'):
+            disease_block = f"""
+            <div style="background: #fff7ed; border-left: 3px solid #ea580c; padding: 10px 14px; border-radius: 6px; margin-top: 12px;">
+                <b style="color: #9a3412; font-size: 13px;">Recent Disease Diagnosis:</b> {diag.get('diagnosis')} (Confidence: {diag.get('confidence', 'N/A')})<br>
+                <span style="font-size: 12px; color: #7c2d12;">Treatment: {str(diag.get('treatment',''))[:120]}</span>
+            </div>
+            """
+
+        # Section 4: Spatial Twin
+        sync_notice_block = ""
+        if s4.get('crop_sync_note'):
+            sync_notice_block = f"""
+            <div style="background: #eff6ff; border-left: 3px solid #3b82f6; padding: 10px 14px; border-radius: 6px; margin-bottom: 12px;">
+                <span style="font-size: 12px; color: #1e40af; line-height: 1.5;">ℹ️ <b>Multi-Module Status:</b> {s4.get('crop_sync_note')}</span>
+            </div>
+            """
+
+        # Section 5: Yield & Farm Efficiency
+        yield_content = ""
+        if s5.get('has_yield_data'):
+            yd = s5.get('data', {})
+            yield_content = f"""
+            <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse: collapse; margin-top: 8px; font-size: 13px;">
+                <tr style="background: #f8fafc;">
+                    <td style="border: 1px solid #e2e8f0; font-weight: 600; color: #475569;">Optimized Yield</td>
+                    <td style="border: 1px solid #e2e8f0; font-weight: 700; color: #15803d;">{yd.get('optimized_yield_t')} tonnes</td>
+                    <td style="border: 1px solid #e2e8f0; font-weight: 600; color: #475569;">Baseline Monoculture</td>
+                    <td style="border: 1px solid #e2e8f0; color: #64748b;">{yd.get('baseline_yield_t')} tonnes</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #e2e8f0; font-weight: 600; color: #475569;">Net Gain</td>
+                    <td style="border: 1px solid #e2e8f0; font-weight: 700; color: #16a34a;" colspan="3">+{yd.get('difference_t')} tonnes (+{yd.get('difference_pct')}%) across {yd.get('land_size_acres')} acre(s)</td>
+                </tr>
+            </table>
+            """
+        else:
+            yield_content = "<p style='font-size: 13px; color: #64748b; margin: 6px 0;'>No yield simulation recorded for this profile yet. Run the Spatial Planner to calculate field yields.</p>"
+
+        # Section 6: AI Insights
+        insights_html = "".join([f"<li style='margin-bottom: 8px; font-size: 13px; color: #334155; line-height: 1.5;'>{pt}</li>" for pt in s6.get('insights', [])])
+
+        # Section 7: Limitations
+        limitations_html = "".join([f"<li style='margin-bottom: 6px; font-size: 12px; color: #64748b; line-height: 1.4;'>{pt}</li>" for pt in s7.get('items', [])])
+
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuperFarmer - Field Advisory Report</title>
+</head>
+<body style="margin: 0; padding: 20px; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 640px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; margin: 0 auto;">
+        <!-- Header Banner with Logo -->
+        <tr>
+            <td align="center" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%); padding: 28px 20px; text-align: center;">
+                <img src="cid:superfarmer_logo" alt="SuperFarmer Logo" width="110" height="110" style="display: block; margin: 0 auto; width: 110px; height: 110px; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.18);" />
+                <h1 style="color: #ffffff; margin: 14px 0 0 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">SuperFarmer</h1>
+                <p style="color: #bbf7d0; margin: 4px 0 0 0; font-size: 13px;">FIELD ADVISORY REPORT • #{header.get('report_number', 1)}</p>
+                <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; font-weight: 600;">Prepared for: {header.get('farmer_name')} • {header.get('generated_at')}</p>
+            </td>
+        </tr>
+
+        <!-- Body Content -->
+        <tr>
+            <td style="padding: 28px 24px;">
+                {notes_block}
+
+                <!-- Section 1 -->
+                <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 18px;">
+                    <h3 style="color: #166534; font-size: 15px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        🏡 Section 1 — Farmer & Farm Details
+                    </h3>
+                    <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 13px; color: #334155;">
+                        <tr>
+                            <td width="50%"><b>Farmer Name:</b> {s1.get('farmer_name')}</td>
+                            <td width="50%"><b>Holding Size:</b> {s1.get('land_size_acres')} acre(s)</td>
+                        </tr>
+                        <tr>
+                            <td><b>Location:</b> {s1.get('location')}</td>
+                            <td><b>Soil Type:</b> {s1.get('soil_type')}</td>
+                        </tr>
+                        <tr>
+                            <td><b>Soil NPK:</b> {npk_display}</td>
+                            <td><b>Water Availability:</b> {s1.get('water_availability')}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><b>Farming Goals:</b> {s1.get('farming_goals')}{ph_display}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Section 2 -->
+                <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 18px;">
+                    <h3 style="color: #166534; font-size: 15px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        🌾 Section 2 — Crop Recommendation
+                    </h3>
+                    <div style="margin-bottom: 8px;">{rec_badges}</div>
+                    <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+                        <b>Selection Logic:</b> {s2.get('reason')}
+                    </p>
+                </div>
+
+                <!-- Section 3 -->
+                <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 18px;">
+                    <h3 style="color: #166534; font-size: 15px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        📋 Section 3 — Active Crop Plan ({s3.get('planned_crop')})
+                    </h3>
+                    <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 13px; color: #334155;">
+                        <tr><td><b>Sowing Window:</b> {s3.get('sowing_schedule')}</td></tr>
+                        <tr><td><b>Irrigation Protocol:</b> {s3.get('irrigation_plan')}</td></tr>
+                        <tr><td><b>Fertilizer Schedule:</b> {s3.get('fertilizer_schedule')}</td></tr>
+                        <tr><td><b>Pest Management:</b> {s3.get('pest_alerts')}</td></tr>
+                    </table>
+                    {disease_block}
+                </div>
+
+                <!-- Section 4 -->
+                <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 18px;">
+                    <h3 style="color: #166534; font-size: 15px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        🗺️ Section 4 — Spatial Twin Layout ({s4.get('main_crop')} + {s4.get('companion_crop')})
+                    </h3>
+                    {sync_notice_block}
+                    <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 13px; color: #334155;">
+                        <tr>
+                            <td width="50%"><b>Layout Mode:</b> {s4.get('layout_mode')}</td>
+                            <td width="50%"><b>Layout Quality Score:</b> {s4.get('layout_score')}/100</td>
+                        </tr>
+                        <tr>
+                            <td><b>Main Crop Spacing:</b> {s4.get('main_spacing_cm')} cm</td>
+                            <td><b>Companion Spacing:</b> {s4.get('comp_spacing_cm')} cm</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><b>Solar Orientation:</b> {s4.get('sunlight_note')}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><b>Soil/Nitrogen Dynamics:</b> {s4.get('nitrogen_balance')}</td>
+                        </tr>
+                    </table>
+                    <p style="margin: 8px 0 0 0; font-size: 11px; color: #64748b; font-style: italic;">
+                        *{s4.get('algorithm_note')}
+                    </p>
+                </div>
+
+                <!-- Section 5 -->
+                <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 18px;">
+                    <h3 style="color: #166534; font-size: 15px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        📊 Section 5 — Yield & Farm Efficiency
+                    </h3>
+                    {yield_content}
+                </div>
+
+                <!-- Section 6 -->
+                <div style="margin-bottom: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 18px;">
+                    <h3 style="color: #166534; font-size: 15px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        🧠 Section 6 — AI Insights & Agronomic Guidance
+                    </h3>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        {insights_html}
+                    </ul>
+                </div>
+
+                <!-- Section 7 -->
+                <div>
+                    <h3 style="color: #475569; font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.04em;">
+                        ⚠️ Section 7 — System Limitations & Advisory Notes
+                    </h3>
+                    <ul style="margin: 0; padding-left: 18px;">
+                        {limitations_html}
+                    </ul>
+                </div>
+            </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+            <td style="background-color: #f8fafc; padding: 18px 24px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8;">
+                © 2026 SuperFarmer Platform • Empowering Farmers with Agentic AI • Generated on demand by user request
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+        return html
 
 
 class SpatialPlannerAgent:
@@ -2195,6 +2653,11 @@ class OrchestratorAgent:
         elif intent == 'weather':
             return WeatherAgent.analyze_weather(**data)
         elif intent == 'send_email':
-            return EmailAgent.send_email(data['to_email'], data['subject'], data['body'])
+            return EmailAgent.send_email(
+                data['to_email'],
+                data['subject'],
+                data['body'],
+                image_path=data.get('image_path')
+            )
         else:
             return {"error": "Unknown intent"}

@@ -1,190 +1,804 @@
 {% extends 'base.html' %}
 {% block content %}
-<div id="report-root" style="max-width: 800px; margin: 0 auto; padding-top: 1rem;">
+<div id="report-root" style="max-width: 960px; margin: 0 auto; padding: 1.5rem 1rem 3rem;">
 
     <!-- LOADING STATE -->
-    <div id="loading-state" style="text-align: center; padding: 5rem 0;">
-        <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">📋</div>
-        <h3 style="color: #475569; font-weight: 700;">Synthesizing Multi-Agent Field Report...</h3>
-        <p style="color: #94a3b8; max-width: 460px; margin: 0.5rem auto 0; line-height: 1.6; font-size: 0.92rem;">
-            Collecting and compressing key information from Intake, Soil, Recommendation, Plan, Spatial Layout, Weather, and Yield agents...
+    <div id="loading-state" style="text-align: center; padding: 6rem 1rem;">
+        <div style="font-size: 3.2rem; margin-bottom: 1.2rem; animation: pulse 1.6s infinite;">📋</div>
+        <h2 style="color: #1e293b; font-weight: 800; font-size: 1.5rem; margin-bottom: 0.5rem;">Synthesizing Field Advisory Report...</h2>
+        <p style="color: #64748b; max-width: 520px; margin: 0 auto; line-height: 1.6; font-size: 0.95rem;">
+            Querying authentic farm profile, soil records, active crop plans, and spatial twin models across the SuperFarmer multi-agent architecture...
         </p>
     </div>
 
     <!-- ERROR STATE -->
-    <div id="error-state" style="display: none; padding: 1.25rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 8px; color: #b91c1c; font-weight: 600; margin-bottom: 1.5rem;"></div>
+    <div id="error-state" style="display: none; padding: 1.25rem 1.5rem; background: #fee2e2; border-left: 5px solid #ef4444; border-radius: 10px; color: #991b1b; font-weight: 600; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.08);"></div>
 
-    <!-- CONCISE REPORT CONTENT -->
-    <div id="report-content" style="display: none;">
+    <!-- REPORT VIEW -->
+    <div id="report-view" style="display: none;">
 
-        <!-- Header Bar -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;" class="no-print">
+        <!-- ACTION TOOLBAR -->
+        <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem; flex-wrap: wrap; gap: 1rem;">
             <div>
-                <h1 style="font-size: 1.75rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                    <span>🌱</span> Field Advisory Report
-                </h1>
-                <p style="color: #64748b; font-size: 0.88rem; margin: 0;">
-                    Prepared for <strong id="hdr-name" style="color: #1e293b;">—</strong> &nbsp;•&nbsp; <span id="hdr-date">—</span> &nbsp;•&nbsp; Report #<span id="hdr-num">1</span>
-                </p>
+                <a href="{{ url_for('recommendation') }}" style="display: inline-flex; align-items: center; gap: 0.4rem; color: #15803d; font-weight: 700; font-size: 0.88rem; text-decoration: none; padding: 0.4rem 0.8rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                    ← Return to Dashboard
+                </a>
             </div>
-            <div style="display: flex; gap: 0.6rem;">
-                <button id="copyBtn" onclick="copyReport()" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
-                    <span>📋</span> Copy Report
+            <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;">
+                <button id="copyBtn" onclick="copyReportSummary()" style="background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; transition: all 0.2s;">
+                    <span>📋</span> Copy Summary
                 </button>
-                <button onclick="window.print()" style="background: #16a34a; color: #ffffff; border: none; padding: 0.55rem 1.2rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
+                <button onclick="window.print()" style="background: #ffffff; color: #334155; border: 1.5px solid #cbd5e1; padding: 0.6rem 1.1rem; border-radius: 8px; font-weight: 600; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 0.45rem;">
                     <span>🖨️</span> Print / PDF
                 </button>
+                <button onclick="openEmailModal()" style="background: #15803d; color: #ffffff; border: none; padding: 0.6rem 1.35rem; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(21, 128, 61, 0.28); transition: transform 0.15s, background-color 0.2s;">
+                    <span>✉️</span> Send to Email
+                </button>
             </div>
         </div>
 
-        <!-- 5-6 Line Concise Summary Card -->
-        <div style="background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: 16px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px rgba(22, 163, 74, 0.08); margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.9rem; margin-bottom: 1.25rem;">
-                <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #16a34a;">
-                    Multi-Agent Synthesis • Key Information
+        <!-- REPORT DOCUMENT CONTAINER -->
+        <div id="report-paper" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); overflow: hidden;">
+
+            <!-- HEADER BANNER -->
+            <div style="background: linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%); color: #ffffff; padding: 2.25rem 2.5rem; position: relative;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 1.25rem;">
+                        <img src="{{ url_for('static', filename='images/auth_logo.png') }}" alt="SuperFarmer Logo"
+                             onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';"
+                             style="width: 72px; height: 72px; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); object-fit: cover;" />
+                        <div id="logo-fallback" style="display: none; width: 72px; height: 72px; border-radius: 50%; background: #ffffff; color: #166534; font-size: 2rem; font-weight: 900; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                            🌱
+                        </div>
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="background: #dcfce7; color: #166534; font-size: 0.72rem; font-weight: 800; padding: 0.2rem 0.65rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em;">
+                                    Official Advisory
+                                </span>
+                                <span style="color: #bbf7d0; font-size: 0.85rem; font-weight: 500;">
+                                    Report #<span id="doc-report-num">1</span>
+                                </span>
+                            </div>
+                            <h1 style="margin: 0.4rem 0 0.25rem; font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; color: #ffffff;">
+                                Field Advisory Report
+                            </h1>
+                            <p style="margin: 0; color: #dcfce7; font-size: 0.92rem; font-weight: 500;">
+                                Prepared for <strong id="doc-farmer-name" style="color: #ffffff;">—</strong> &nbsp;•&nbsp; <span id="doc-date">—</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Meta Pill Box -->
+                    <div style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 0.85rem 1.25rem; text-align: right; min-width: 170px;">
+                        <div style="font-size: 0.72rem; color: #bbf7d0; text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em;">Holding Area</div>
+                        <div style="font-size: 1.35rem; font-weight: 800; color: #ffffff;" id="doc-land-size">—</div>
+                        <div style="font-size: 0.8rem; color: #e2e8f0; margin-top: 0.2rem;" id="doc-location">—</div>
+                    </div>
                 </div>
-                <span style="background: #dcfce7; color: #15803d; font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px solid #86efac;">
-                    5–6 Line Summary
-                </span>
             </div>
 
-            <!-- List of the 5-6 lines -->
-            <div id="summary-lines-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
-                <!-- Populated dynamically with exactly the 5-6 lines -->
+            <!-- DOCUMENT BODY -->
+            <div style="padding: 2.25rem 2.5rem; display: flex; flex-direction: column; gap: 2.25rem;">
+
+                <!-- SECTION 1: FARMER & FARM DETAILS -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">🏡</span>
+                        <h2>Section 1 — Farmer & Farm Details</h2>
+                    </div>
+                    <div class="grid-cards-3">
+                        <div class="info-card">
+                            <span class="card-label">Farmer Name</span>
+                            <span class="card-value" id="s1-name">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="card-label">Farm Holding Size</span>
+                            <span class="card-value" id="s1-acres">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="card-label">Geographic Location</span>
+                            <span class="card-value" id="s1-location">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="card-label">Soil Classification</span>
+                            <span class="card-value" id="s1-soil">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="card-label">Soil Macronutrients (NPK)</span>
+                            <span class="card-value" id="s1-npk">—</span>
+                        </div>
+                        <div class="info-card">
+                            <span class="card-label">Water Availability</span>
+                            <span class="card-value" id="s1-water">—</span>
+                        </div>
+                    </div>
+                    <div id="s1-extra-box" style="margin-top: 0.85rem; padding: 0.85rem 1.1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.88rem; color: #475569;">
+                        <b>Stated Farming Goals:</b> <span id="s1-goals">—</span>
+                        <span id="s1-ph-container" style="margin-left: 1.5rem; display: none;"><b>Soil pH:</b> <span id="s1-ph">—</span></span>
+                    </div>
+                </section>
+
+                <!-- SECTION 2: CROP RECOMMENDATION -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">🌾</span>
+                        <h2>Section 2 — Crop Recommendation</h2>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem;">
+                        <div style="margin-bottom: 1rem;">
+                            <span class="card-label" style="margin-bottom: 0.45rem;">AI-Recommended Crops for this Profile</span>
+                            <div id="s2-crops-list" style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.35rem;">
+                                <!-- Badges populated dynamically -->
+                            </div>
+                        </div>
+                        <div style="border-top: 1px solid #e2e8f0; padding-top: 0.9rem; margin-top: 0.9rem;">
+                            <div style="font-size: 0.9rem; color: #334155; line-height: 1.6;">
+                                <strong style="color: #15803d;">Agronomic Suitability Reason:</strong>
+                                <span id="s2-reason">—</span>
+                            </div>
+                            <div id="s2-factors-container" style="margin-top: 0.65rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <!-- Evaluated factors -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 3: CROP PLAN -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">📋</span>
+                        <h2>Section 3 — Active Crop Plan</h2>
+                    </div>
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.15rem; flex-wrap: wrap; gap: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                <span style="font-size: 1.2rem;">🌱</span>
+                                <span style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">Planned Crop: <span id="s3-crop" style="color: #15803d;">—</span></span>
+                            </div>
+                            <span id="s3-status" style="background: #dcfce7; color: #166534; font-size: 0.75rem; font-weight: 800; padding: 0.25rem 0.75rem; border-radius: 999px; text-transform: uppercase;">
+                                Active
+                            </span>
+                        </div>
+
+                        <div class="grid-cards-2">
+                            <div class="plan-card">
+                                <span class="plan-card-title">📅 Sowing Window & Schedule</span>
+                                <p class="plan-card-body" id="s3-sowing">—</p>
+                            </div>
+                            <div class="plan-card">
+                                <span class="plan-card-title">💧 Irrigation Protocol</span>
+                                <p class="plan-card-body" id="s3-irrig">—</p>
+                            </div>
+                            <div class="plan-card">
+                                <span class="plan-card-title">🧪 Fertilizer Regimen</span>
+                                <p class="plan-card-body" id="s3-fert">—</p>
+                            </div>
+                            <div class="plan-card">
+                                <span class="plan-card-title">🛡️ Pest Management & Defense</span>
+                                <p class="plan-card-body" id="s3-pest">—</p>
+                            </div>
+                        </div>
+
+                        <!-- Optional Disease Diagnosis Card -->
+                        <div id="s3-disease-card" style="display: none; margin-top: 1.25rem; background: #fff7ed; border: 1px solid #ffedd5; border-left: 4px solid #ea580c; border-radius: 8px; padding: 1rem 1.25rem;">
+                            <div style="font-weight: 700; color: #9a3412; font-size: 0.92rem; margin-bottom: 0.35rem;">
+                                🔬 Recorded Pathology Diagnosis: <span id="s3-disease-name" style="font-weight: 800;">—</span>
+                                <span id="s3-disease-conf" style="font-size: 0.78rem; font-weight: 600; color: #c2410c; margin-left: 0.4rem;"></span>
+                            </div>
+                            <div style="font-size: 0.88rem; color: #7c2d12; line-height: 1.5;" id="s3-disease-treatment"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 4: SPATIAL TWIN / FARM LAYOUT -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">🗺️</span>
+                        <h2>Section 4 — Spatial Twin / Farm Layout</h2>
+                    </div>
+
+                    <!-- Crop Sync Notice if Crops Differ -->
+                    <div id="s4-sync-notice" style="display: none; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 0.9rem 1.15rem; margin-bottom: 1rem; font-size: 0.88rem; color: #1e40af; line-height: 1.5;">
+                        <!-- Note populated dynamically -->
+                    </div>
+
+                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.8rem;">
+                            <div>
+                                <span class="card-label">Spatial Model Pairing</span>
+                                <div style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-top: 0.2rem;">
+                                    <span id="s4-main-crop" style="color: #15803d;">—</span> &nbsp;+&nbsp; <span id="s4-comp-crop" style="color: #0284c7;">—</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.6rem; align-items: center;">
+                                <span style="background: #f1f5f9; color: #334155; font-size: 0.82rem; font-weight: 700; padding: 0.35rem 0.8rem; border-radius: 8px; border: 1px solid #cbd5e1;" id="s4-layout-mode">
+                                    Hexagonal Staggered Grid
+                                </span>
+                                <span style="background: #dcfce7; color: #166534; font-size: 0.82rem; font-weight: 800; padding: 0.35rem 0.8rem; border-radius: 8px; border: 1px solid #86efac;" id="s4-layout-score">
+                                    Quality: 88/100
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="grid-cards-3">
+                            <div class="info-card">
+                                <span class="card-label">Primary Crop Spacing</span>
+                                <span class="card-value" id="s4-main-spacing">—</span>
+                            </div>
+                            <div class="info-card">
+                                <span class="card-label">Companion Spacing</span>
+                                <span class="card-value" id="s4-comp-spacing">—</span>
+                            </div>
+                            <div class="info-card">
+                                <span class="card-label">Land Utilization Index</span>
+                                <span class="card-value" id="s4-land-eff">—</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.65rem;">
+                            <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.88rem; color: #334155;">
+                                <b style="color: #0f172a;">☀️ Solar Canopy Orientation:</b> <span id="s4-sunlight">—</span>
+                            </div>
+                            <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 0.88rem; color: #334155;">
+                                <b style="color: #0f172a;">🌱 Nitrogen & Soil Dynamics:</b> <span id="s4-nitrogen">—</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem; font-size: 0.8rem; color: #64748b; font-style: italic;">
+                            ℹ️ <strong>Algorithm Note:</strong> This Spatial Twin layout is generated using SuperFarmer's deterministic rule-based spatial planning and hexagonal staggered crop placement algorithm.
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 5: YIELD & FARM EFFICIENCY -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">📊</span>
+                        <h2>Section 5 — Yield & Farm Efficiency</h2>
+                    </div>
+                    <div id="s5-has-data" style="display: none; background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.06);">
+                        <div class="grid-cards-3">
+                            <div class="info-card" style="background: #f0fdf4; border-color: #bbf7d0;">
+                                <span class="card-label" style="color: #166534;">Optimized Layout Yield</span>
+                                <span class="card-value" id="s5-opt-yield" style="color: #15803d; font-size: 1.5rem;">—</span>
+                            </div>
+                            <div class="info-card">
+                                <span class="card-label">Baseline Monoculture</span>
+                                <span class="card-value" id="s5-base-yield" style="color: #64748b; font-size: 1.5rem;">—</span>
+                            </div>
+                            <div class="info-card" style="background: #f0fdf4; border-color: #bbf7d0;">
+                                <span class="card-label" style="color: #166534;">Projected Net Differential</span>
+                                <span class="card-value" id="s5-gain" style="color: #15803d; font-size: 1.5rem;">—</span>
+                            </div>
+                        </div>
+                        <p style="margin: 1rem 0 0; font-size: 0.88rem; color: #475569; line-height: 1.5;" id="s5-note"></p>
+                    </div>
+
+                    <div id="s5-no-data" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem; color: #64748b; font-size: 0.92rem; line-height: 1.5;">
+                        ℹ️ <strong>Quantitative Simulation Pending:</strong> No yield calculation record found for this profile yet. Launch the <a href="{{ url_for('spatial_planner') }}" style="color: #15803d; font-weight: 700; text-decoration: underline;">Spatial Planner</a> to simulate plant counts and harvest tonnage.
+                    </div>
+                </section>
+
+                <!-- SECTION 6: AI INSIGHTS & RECOMMENDATIONS -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">🧠</span>
+                        <h2>Section 6 — AI Insights & Grounded Recommendations</h2>
+                    </div>
+                    <div id="s6-insights-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                        <!-- Insight cards dynamically injected -->
+                    </div>
+                </section>
+
+                <!-- SECTION 7: SYSTEM LIMITATIONS -->
+                <section class="report-section">
+                    <div class="section-title">
+                        <span class="section-icon">⚠️</span>
+                        <h2>Section 7 — System Limitations & Agronomic Notes</h2>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.25rem 1.5rem;">
+                        <ul id="s7-limitations-list" style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #64748b; line-height: 1.6;">
+                            <!-- Limitations list -->
+                        </ul>
+                    </div>
+                </section>
+
             </div>
+
+            <!-- DOCUMENT FOOTER -->
+            <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 1.25rem 2.5rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: #94a3b8; flex-wrap: wrap; gap: 0.5rem;">
+                <div>SuperFarmer Multi-Agent Agriculture Platform • Generated On-Demand</div>
+                <div class="no-print" style="display: flex; gap: 1rem;">
+                    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" style="background: none; border: none; color: #15803d; font-weight: 700; cursor: pointer; padding: 0;">
+                        ↑ Back to Top
+                    </button>
+                </div>
+            </div>
+
         </div>
 
-        <!-- Footer / Return Links -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; font-size: 0.85rem; color: #64748b;" class="no-print">
-            <div>
-                🌾 SuperFarmer AI Field Intelligence
+    </div>
+
+</div>
+
+<!-- SEND TO EMAIL MODAL DIALOG -->
+<div id="email-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <span style="font-size: 1.5rem;">✉️</span>
+                <div>
+                    <h3 style="margin: 0; color: #0f172a; font-size: 1.15rem; font-weight: 800;">Send Field Advisory Report</h3>
+                    <p style="margin: 0.15rem 0 0; font-size: 0.8rem; color: #64748b;">Delivers a full HTML report directly to the recipient's inbox.</p>
+                </div>
             </div>
-            <div style="display: flex; gap: 1rem;">
-                <a href="{{ url_for('recommendation') }}" style="color: #16a34a; text-decoration: none; font-weight: 600;">← Back to Dashboard</a>
-                <a href="{{ url_for('spatial_planner') }}" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Spatial Twin →</a>
-            </div>
+            <button onclick="closeEmailModal()" class="modal-close" title="Close">&times;</button>
         </div>
+
+        <form id="email-send-form" onsubmit="submitSendEmail(event)" style="padding: 1.5rem 1.75rem;">
+            <!-- Recipient Email -->
+            <div style="margin-bottom: 1.15rem;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                    Recipient Email Address <span style="color: #ef4444;">*</span>
+                </label>
+                <input type="email" id="modal-email-recipient" required placeholder="farmer@example.com"
+                       style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.92rem; color: #1e293b; outline: none; transition: border-color 0.2s;" />
+                <span id="email-format-error" style="display: none; color: #ef4444; font-size: 0.78rem; margin-top: 0.25rem;"></span>
+            </div>
+
+            <!-- Subject -->
+            <div style="margin-bottom: 1.15rem;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                    Email Subject
+                </label>
+                <input type="text" id="modal-email-subject" value="SuperFarmer - Field Advisory Report"
+                       style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.92rem; color: #1e293b; outline: none;" />
+            </div>
+
+            <!-- Custom Message -->
+            <div style="margin-bottom: 1.25rem;">
+                <label style="display: block; font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 0.35rem;">
+                    Optional Note / Message
+                </label>
+                <textarea id="modal-email-notes" rows="3" placeholder="Add personalized recommendations or field notes for the farmer..."
+                          style="width: 100%; box-sizing: border-box; padding: 0.65rem 0.85rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; color: #1e293b; outline: none; font-family: inherit; resize: vertical;"></textarea>
+            </div>
+
+            <!-- In-Modal Status Notification -->
+            <div id="modal-alert-box" style="display: none; padding: 0.85rem 1rem; border-radius: 8px; font-size: 0.88rem; margin-bottom: 1.25rem;"></div>
+
+            <!-- Modal Action Buttons -->
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; align-items: center;">
+                <button type="button" onclick="closeEmailModal()" id="modal-cancel-btn"
+                        style="background: #f1f5f9; color: #475569; border: 1.5px solid #cbd5e1; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 600; font-size: 0.88rem; cursor: pointer;">
+                    Cancel
+                </button>
+                <button type="submit" id="modal-send-btn"
+                        style="background: #15803d; color: #ffffff; border: none; padding: 0.6rem 1.45rem; border-radius: 8px; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 0.45rem; box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);">
+                    <span id="btn-spinner" style="display: none; animation: spin 1s linear infinite;">🔄</span>
+                    <span id="btn-text">Send Email</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 <style>
-    @keyframes pulse { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.75} 100%{transform:scale(1);opacity:1} }
-    .report-line-item {
+    @keyframes pulse { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:.75} 100%{transform:scale(1);opacity:1} }
+    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+
+    .report-section {
         display: flex;
-        gap: 0.9rem;
-        align-items: flex-start;
-        padding: 0.85rem 1rem;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .section-title h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: #14532d;
+        letter-spacing: -0.01em;
+    }
+
+    .section-icon {
+        font-size: 1.35rem;
+    }
+
+    .grid-cards-3 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 0.85rem;
+    }
+
+    .grid-cards-2 {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 0.85rem;
+    }
+
+    .info-card {
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        line-height: 1.6;
-        font-size: 0.93rem;
-        color: #1e293b;
+        padding: 0.9rem 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
     }
-    .report-line-icon {
-        font-size: 1.3rem;
-        line-height: 1.2;
-        flex-shrink: 0;
-    }
-    .report-line-label {
-        color: #15803d;
-        font-weight: 800;
-        font-size: 0.8rem;
+
+    .card-label {
+        font-size: 0.75rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-right: 0.4rem;
-        display: inline-block;
+        letter-spacing: 0.05em;
+        color: #64748b;
     }
+
+    .card-value {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .plan-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+    }
+
+    .plan-card-title {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #166534;
+        text-transform: uppercase;
+        margin-bottom: 0.35rem;
+    }
+
+    .plan-card-body {
+        margin: 0;
+        font-size: 0.88rem;
+        color: #334155;
+        line-height: 1.5;
+    }
+
+    .insight-card {
+        display: flex;
+        gap: 0.9rem;
+        align-items: flex-start;
+        padding: 0.9rem 1.15rem;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 10px;
+        font-size: 0.92rem;
+        color: #14532d;
+        line-height: 1.55;
+    }
+
+    /* Modal Styling */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 1rem;
+    }
+
+    .modal-box {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        max-width: 520px;
+        width: 100%;
+        overflow: hidden;
+        animation: modalIn 0.2s ease-out;
+    }
+
+    @keyframes modalIn {
+        from { opacity: 0; transform: translateY(12px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.25rem 1.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #64748b;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0.2rem;
+    }
+
     @media print {
-        .navbar, .no-print { display: none !important; }
+        .navbar, .no-print, #email-modal { display: none !important; }
+        body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; margin: 0 !important; }
         #report-root { max-width: 100% !important; padding: 0 !important; }
-        .report-line-item { background: #ffffff !important; border: 1px solid #cbd5e1 !important; }
+        #report-paper { border: none !important; box-shadow: none !important; }
     }
 </style>
 
 <script>
-let fullReportText = "";
+let globalReportData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     fetch('/generate-report', { method: 'POST' })
-        .then(async r => {
-            if (!r.ok) { const t = await r.text(); throw new Error(t); }
-            return r.json();
-        })
-        .then(d => {
-            if (d.error) throw new Error(d.error);
-
-            document.getElementById('loading-state').style.display = 'none';
-            document.getElementById('report-content').style.display = 'block';
-
-            // Meta
-            document.getElementById('hdr-name').textContent = d.farmer_name || 'Farmer';
-            document.getElementById('hdr-date').textContent = d.generated_at || new Date().toLocaleDateString();
-            document.getElementById('hdr-num').textContent = d.report_number || '1';
-
-            const listC = document.getElementById('summary-lines-list');
-            listC.innerHTML = '';
-
-            const lines = d.lines || d.summary_lines || [];
-            fullReportText = d.report || (Array.isArray(lines) ? lines.join('\n') : "");
-
-            const domainBadges = [
-                { icon: '🏡', label: 'Farmer & Farm Details' },
-                { icon: '🌾', label: 'Crop Recommendation' },
-                { icon: '📋', label: 'Crop Plan' },
-                { icon: '🗺️', label: 'Spatial Farming Layout' },
-                { icon: '🌦️', label: 'Weather & Risk' },
-                { icon: '📈', label: 'Yield & Profit Insights' }
-            ];
-
-            if (Array.isArray(lines) && lines.length > 0) {
-                lines.forEach((line, idx) => {
-                    const badge = domainBadges[idx] || { icon: '🔹', label: `Insight ${idx + 1}` };
-                    const cleanText = line.replace(/^[A-Za-z\s&]+:\s*/, '');
-                    const item = document.createElement('div');
-                    item.className = 'report-line-item';
-                    item.innerHTML = `
-                        <span class="report-line-icon">${badge.icon}</span>
-                        <div>
-                            <span class="report-line-label">${badge.label}:</span>
-                            <span>${cleanText}</span>
-                        </div>
-                    `;
-                    listC.appendChild(item);
-                });
-            } else if (fullReportText) {
-                const splitLines = fullReportText.split('\n').filter(l => l.trim());
-                splitLines.forEach((line, idx) => {
-                    const badge = domainBadges[idx] || { icon: '🔹', label: `Insight ${idx + 1}` };
-                    const cleanText = line.replace(/^[A-Za-z\s&]+:\s*/, '');
-                    const item = document.createElement('div');
-                    item.className = 'report-line-item';
-                    item.innerHTML = `
-                        <span class="report-line-icon">${badge.icon}</span>
-                        <div>
-                            <span class="report-line-label">${badge.label}:</span>
-                            <span>${cleanText}</span>
-                        </div>
-                    `;
-                    listC.appendChild(item);
-                });
+        .then(async res => {
+            if (!res.ok) {
+                const txt = await res.text();
+                throw new Error(txt || `HTTP ${res.status}`);
             }
+            return res.json();
+        })
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            globalReportData = data;
+            renderReport(data);
         })
         .catch(err => {
             console.error(err);
             document.getElementById('loading-state').style.display = 'none';
             const es = document.getElementById('error-state');
             es.style.display = 'block';
-            es.textContent = `Error generating report: ${err.message}`;
+            es.innerHTML = `<strong>Error generating Field Advisory Report:</strong> ${err.message}`;
         });
 });
 
-function copyReport() {
-    if (!fullReportText) return;
-    navigator.clipboard.writeText(fullReportText).then(() => {
+function renderReport(d) {
+    const s = d.sections || {};
+    const hdr = s.header || {};
+    const s1 = s.section_1_farmer || {};
+    const s2 = s.section_2_recommendations || {};
+    const s3 = s.section_3_crop_plan || {};
+    const s4 = s.section_4_spatial_twin || {};
+    const s5 = s.section_5_yield_efficiency || {};
+    const s6 = s.section_6_ai_insights || {};
+    const s7 = s.section_7_limitations || {};
+
+    // Header metadata
+    document.getElementById('doc-report-num').textContent = hdr.report_number || d.report_number || '1';
+    document.getElementById('doc-farmer-name').textContent = hdr.farmer_name || d.farmer_name || 'Farmer';
+    document.getElementById('doc-date').textContent = hdr.generated_at || d.generated_at || 'Today';
+    document.getElementById('doc-land-size').textContent = `${hdr.land_size_acres || d.land_size || '1'} Acres`;
+    document.getElementById('doc-location').textContent = hdr.location || d.location || 'Local Region';
+
+    // Section 1: Farmer Details
+    document.getElementById('s1-name').textContent = s1.farmer_name || d.farmer_name || '—';
+    document.getElementById('s1-acres').textContent = `${s1.land_size_acres || d.land_size || '—'} acre(s)`;
+    document.getElementById('s1-location').textContent = s1.location || '—';
+    document.getElementById('s1-soil').textContent = s1.soil_type || '—';
+    
+    if (s1.has_npk) {
+        document.getElementById('s1-npk').textContent = `N=${s1.nitrogen} | P=${s1.phosphorus} | K=${s1.potassium} kg/ha`;
+    } else {
+        document.getElementById('s1-npk').textContent = 'Pending laboratory test';
+    }
+
+    document.getElementById('s1-water').textContent = s1.water_availability || '—';
+    document.getElementById('s1-goals').textContent = s1.farming_goals || 'Standard seasonal productivity';
+
+    if (s1.ph !== null && s1.ph !== undefined) {
+        document.getElementById('s1-ph-container').style.display = 'inline-block';
+        document.getElementById('s1-ph').textContent = s1.ph;
+    }
+
+    // Section 2: Recommendations
+    const recContainer = document.getElementById('s2-crops-list');
+    recContainer.innerHTML = '';
+    const recCrops = s2.recommended_crops || [];
+    if (recCrops.length > 0) {
+        recCrops.forEach(c => {
+            const b = document.createElement('span');
+            b.style.cssText = 'background: #dcfce7; color: #166534; font-weight: 800; font-size: 0.88rem; padding: 0.35rem 0.9rem; border-radius: 999px; border: 1.5px solid #86efac; display: inline-flex; align-items: center; gap: 0.3rem;';
+            b.innerHTML = `🌾 ${c}`;
+            recContainer.appendChild(b);
+        });
+    } else {
+        recContainer.textContent = s2.crops_str || 'Corn, Soybean';
+    }
+
+    document.getElementById('s2-reason').textContent = s2.reason || 'Agronomically suited for your soil characteristics and water capacity.';
+
+    const factorsBox = document.getElementById('s2-factors-container');
+    factorsBox.innerHTML = '';
+    (s2.factors || []).forEach(f => {
+        const p = document.createElement('span');
+        p.style.cssText = 'background: #f1f5f9; color: #475569; font-size: 0.78rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid #cbd5e1;';
+        p.textContent = `✓ ${f}`;
+        factorsBox.appendChild(p);
+    });
+
+    // Section 3: Crop Plan
+    document.getElementById('s3-crop').textContent = s3.planned_crop || '—';
+    document.getElementById('s3-status').textContent = s3.status || 'Active';
+    document.getElementById('s3-sowing').textContent = s3.sowing_schedule || '—';
+    document.getElementById('s3-irrig').textContent = s3.irrigation_plan || '—';
+    document.getElementById('s3-fert').textContent = s3.fertilizer_schedule || '—';
+    document.getElementById('s3-pest').textContent = s3.pest_alerts || '—';
+
+    // Pathology / Disease if available
+    const diag = s3.disease_diagnosis;
+    if (diag && diag.diagnosis) {
+        const diagCard = document.getElementById('s3-disease-card');
+        diagCard.style.display = 'block';
+        document.getElementById('s3-disease-name').textContent = diag.diagnosis;
+        if (diag.confidence) document.getElementById('s3-disease-conf').textContent = `(Confidence: ${diag.confidence})`;
+        document.getElementById('s3-disease-treatment').innerHTML = `<b>Treatment:</b> ${diag.treatment || 'Consult extension advisory'}`;
+    }
+
+    // Section 4: Spatial Twin
+    if (s4.crop_sync_note) {
+        const syncNotice = document.getElementById('s4-sync-notice');
+        syncNotice.style.display = 'block';
+        syncNotice.innerHTML = `⚠️ <b>Multi-Module Status:</b> ${s4.crop_sync_note}`;
+    }
+
+    document.getElementById('s4-main-crop').textContent = s4.main_crop || s3.planned_crop || '—';
+    document.getElementById('s4-comp-crop').textContent = s4.companion_crop || 'None';
+    document.getElementById('s4-layout-mode').textContent = s4.layout_mode || 'Hexagonal Staggered Grid';
+    document.getElementById('s4-layout-score').textContent = `Quality Score: ${s4.layout_score || 85}/100`;
+    document.getElementById('s4-main-spacing').textContent = `${s4.main_spacing_cm || 60} cm`;
+    document.getElementById('s4-comp-spacing').textContent = `${s4.comp_spacing_cm || 30} cm`;
+    document.getElementById('s4-land-eff').textContent = `${s4.land_efficiency_pct || 85}%`;
+    document.getElementById('s4-sunlight').textContent = s4.sunlight_note || 'Canopy orientation balanced to avoid shading.';
+    document.getElementById('s4-nitrogen').textContent = s4.nitrogen_balance || 'Balanced nutrient depletion.';
+
+    // Section 5: Yield & Farm Efficiency
+    if (s5.has_yield_data && s5.data) {
+        document.getElementById('s5-has-data').style.display = 'block';
+        document.getElementById('s5-no-data').style.display = 'none';
+        document.getElementById('s5-opt-yield').textContent = `${s5.data.optimized_yield_t} T`;
+        document.getElementById('s5-base-yield').textContent = `${s5.data.baseline_yield_t} T`;
+        document.getElementById('s5-gain').textContent = `+${s5.data.difference_t} T (+${s5.data.difference_pct}%)`;
+        document.getElementById('s5-note').textContent = s5.data.note || '';
+    } else {
+        document.getElementById('s5-has-data').style.display = 'none';
+        document.getElementById('s5-no-data').style.display = 'block';
+    }
+
+    // Section 6: AI Insights
+    const insightsContainer = document.getElementById('s6-insights-container');
+    insightsContainer.innerHTML = '';
+    (s6.insights || []).forEach(item => {
+        const c = document.createElement('div');
+        c.className = 'insight-card';
+        c.innerHTML = `
+            <span style="font-size: 1.15rem; line-height: 1;">💡</span>
+            <div>${item}</div>
+        `;
+        insightsContainer.appendChild(c);
+    });
+
+    // Section 7: Limitations
+    const limList = document.getElementById('s7-limitations-list');
+    limList.innerHTML = '';
+    (s7.items || []).forEach(lim => {
+        const li = document.createElement('li');
+        li.textContent = lim;
+        limList.appendChild(li);
+    });
+
+    // Prefill modal email from user profile if available
+    if (d.user_email) {
+        document.getElementById('modal-email-recipient').value = d.user_email;
+    }
+
+    document.getElementById('loading-state').style.display = 'none';
+    document.getElementById('report-view').style.display = 'block';
+}
+
+// ── Email Modal Functions ──
+function openEmailModal() {
+    const modal = document.getElementById('email-modal');
+    const alertBox = document.getElementById('modal-alert-box');
+    alertBox.style.display = 'none';
+    modal.style.display = 'flex';
+}
+
+function closeEmailModal() {
+    document.getElementById('email-modal').style.display = 'none';
+}
+
+async function submitSendEmail(e) {
+    e.preventDefault();
+    const recipient = document.getElementById('modal-email-recipient').value.trim();
+    const subject = document.getElementById('modal-email-subject').value.trim();
+    const notes = document.getElementById('modal-email-notes').value.trim();
+    const alertBox = document.getElementById('modal-alert-box');
+    const sendBtn = document.getElementById('modal-send-btn');
+    const cancelBtn = document.getElementById('modal-cancel-btn');
+    const spinner = document.getElementById('btn-spinner');
+    const btnText = document.getElementById('btn-text');
+
+    if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fee2e2';
+        alertBox.style.color = '#991b1b';
+        alertBox.style.border = '1px solid #fecaca';
+        alertBox.textContent = 'Please enter a valid recipient email address.';
+        return;
+    }
+
+    // Safety: Disable buttons & show loading state to prevent accidental double-click
+    sendBtn.disabled = true;
+    cancelBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnText.textContent = 'Sending Report...';
+    alertBox.style.display = 'none';
+
+    try {
+        const res = await fetch('/send-report-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                recipient_email: recipient,
+                subject: subject,
+                notes: notes
+            })
+        });
+
+        const result = await res.json();
+        if (res.ok && result.success) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = '#f0fdf4';
+            alertBox.style.color = '#166534';
+            alertBox.style.border = '1px solid #bbf7d0';
+            alertBox.innerHTML = `✅ <strong>Success!</strong> ${result.message}`;
+            setTimeout(() => {
+                closeEmailModal();
+                sendBtn.disabled = false;
+                cancelBtn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = 'Send Email';
+            }, 2200);
+        } else {
+            throw new Error(result.error || 'Failed to dispatch email.');
+        }
+    } catch (err) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fee2e2';
+        alertBox.style.color = '#991b1b';
+        alertBox.style.border = '1px solid #fecaca';
+        alertBox.innerHTML = `❌ <strong>Error:</strong> ${err.message}`;
+        sendBtn.disabled = false;
+        cancelBtn.disabled = false;
+        spinner.style.display = 'none';
+        btnText.textContent = 'Send Email';
+    }
+}
+
+// ── Copy Summary Helper ──
+function copyReportSummary() {
+    if (!globalReportData) return;
+    const lines = globalReportData.summary_lines || [];
+    const textToCopy = lines.length > 0 ? lines.join('\n') : (globalReportData.report || 'Field Advisory Report');
+    navigator.clipboard.writeText(textToCopy).then(() => {
         const btn = document.getElementById('copyBtn');
         const oldHtml = btn.innerHTML;
-        btn.innerHTML = '<span>✅</span> Copied!';
+        btn.innerHTML = '<span>✅</span> Copied Summary!';
         setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
     });
 }

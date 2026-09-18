@@ -52,6 +52,9 @@ orchestrator = OrchestratorAgent()
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_NOTIFICATION_IMAGE = os.path.join(BASE_DIR, 'images', 'auth_logo.png')
+
 def send_async_email(email_data):
     orchestrator.route_request('send_email', email_data)
 
@@ -105,21 +108,48 @@ def signup_post(
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to SuperFarmer</title>
 </head>
-<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222222; line-height: 1.6; margin: 20px;">
-    <h2 style="color: #2E7D32;">Welcome to SuperFarmer!</h2>
-    <p>Hello,</p>
-    <p>Thank you for registering with <b>SuperFarmer</b>. Your account has been created successfully.</p>
-    <p>You can now log in to explore personalized crop recommendations, real-time weather alerts, disease diagnosis, and spatial farm planning.</p>
-    <br>
-    <p>Best regards,<br>
-    <strong>The SuperFarmer Team</strong></p>
+<body style="margin: 0; padding: 20px; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; margin: 0 auto;">
+        <tr>
+            <td align="center" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%); padding: 28px 20px; text-align: center;">
+                <img src="cid:superfarmer_logo" alt="SuperFarmer Logo" width="125" height="125" style="display: block; margin: 0 auto; width: 125px; height: 125px; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
+                <h1 style="color: #ffffff; margin: 14px 0 0 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">SuperFarmer</h1>
+                <p style="color: #bbf7d0; margin: 4px 0 0 0; font-size: 13px;">AI-Driven Precision Agriculture</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px 28px;">
+                <h2 style="color: #15803d; margin-top: 0; font-size: 19px; font-weight: 600;">Welcome to SuperFarmer! 🌱</h2>
+                <p style="font-size: 15px; line-height: 1.6; color: #334155; margin-top: 12px;">Hello,</p>
+                <p style="font-size: 15px; line-height: 1.6; color: #334155;">Thank you for registering with <b>SuperFarmer</b>. Your account has been created successfully (<code>{email}</code>).</p>
+                <p style="font-size: 15px; line-height: 1.6; color: #334155;">You can now log in to explore personalized crop recommendations, real-time weather alerts, disease diagnosis, and spatial farm planning.</p>
+                <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 6px; margin: 22px 0;">
+                    <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">
+                        🚀 <strong>Next Step:</strong> Complete your farm intake profile to generate your customized soil & crop management strategy.
+                    </p>
+                </div>
+                <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 0;">
+                    Best regards,<br>
+                    <strong style="color: #15803d;">The SuperFarmer Team</strong>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color: #f8fafc; padding: 14px 28px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+                © 2026 SuperFarmer • Empowering Farmers with Agentic AI
+            </td>
+        </tr>
+    </table>
 </body>
 </html>"""
         threading.Thread(target=send_async_email, args=({
             'to_email': email,
             'subject': 'Welcome to SuperFarmer!',
-            'body': welcome_html
+            'body': welcome_html,
+            'image_path': DEFAULT_NOTIFICATION_IMAGE
         },)).start()
 
         return _redirect('intake')
@@ -150,21 +180,47 @@ def login_post(
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Security Alert - SuperFarmer</title>
 </head>
-<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222222; line-height: 1.6; margin: 20px;">
-    <h2 style="color: #1976D2;">Security Alert: New Login to SuperFarmer</h2>
-    <p>Hello,</p>
-    <p>We detected a new login to your <b>SuperFarmer</b> account (<code>{email}</code>).</p>
-    <p><b>Note:</b> If you did not perform this login, please update your account password immediately to secure your profile.</p>
-    <br>
-    <p>Best regards,<br>
-    <strong>SuperFarmer Security Team</strong></p>
+<body style="margin: 0; padding: 20px; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif; background-color: #f1f5f9; color: #1e293b;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; margin: 0 auto;">
+        <tr>
+            <td align="center" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%); padding: 28px 20px; text-align: center;">
+                <img src="cid:superfarmer_logo" alt="SuperFarmer Logo" width="125" height="125" style="display: block; margin: 0 auto; width: 125px; height: 125px; border-radius: 50%; background: #ffffff; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
+                <h1 style="color: #ffffff; margin: 14px 0 0 0; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">SuperFarmer</h1>
+                <p style="color: #bbf7d0; margin: 4px 0 0 0; font-size: 13px;">Account Security Center</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 30px 28px;">
+                <h2 style="color: #0369a1; margin-top: 0; font-size: 19px; font-weight: 600;">Security Alert: New Login to SuperFarmer</h2>
+                <p style="font-size: 15px; line-height: 1.6; color: #334155; margin-top: 12px;">Hello,</p>
+                <p style="font-size: 15px; line-height: 1.6; color: #334155;">We detected a new login to your <b>SuperFarmer</b> account (<code>{email}</code>).</p>
+                <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 14px 18px; border-radius: 6px; margin: 20px 0;">
+                    <p style="margin: 0; font-size: 13px; color: #92400e; line-height: 1.5;">
+                        ⚠️ <strong>Security Notice:</strong> If you did not perform this login, please update your account password immediately to secure your profile.
+                    </p>
+                </div>
+                <p style="font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 0;">
+                    Best regards,<br>
+                    <strong style="color: #0369a1;">SuperFarmer Security Team</strong>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <td style="background-color: #f8fafc; padding: 14px 28px; text-align: center; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8;">
+                © 2026 SuperFarmer • Automated Security Notification
+            </td>
+        </tr>
+    </table>
 </body>
 </html>"""
         threading.Thread(target=send_async_email, args=({
             'to_email': email,
             'subject': 'New Login Alert - SuperFarmer',
-            'body': login_html
+            'body': login_html,
+            'image_path': DEFAULT_NOTIFICATION_IMAGE
         },)).start()
 
         # Try to grab existing farmer profile
@@ -327,6 +383,7 @@ async def disease_post(
 
     data = {'leaf_text': leaf_text, 'leaf_image': image_obj}
     diagnosis = orchestrator.route_request('diagnose', data)
+    request.session['last_diagnosis'] = diagnosis
     return _render(request, 'disease.html', diagnosis=diagnosis)
 
 
@@ -391,6 +448,15 @@ async def spatial_planner_post(request: Request):
 
 # ── Report ───────────────────────────────────────────────────────────────────
 
+def _get_report_context(request: Request) -> dict:
+    """Helper to collect authentic session and profile context for report generation."""
+    return {
+        'farmer_id': request.session.get('farmer_id'),
+        'user_id': request.session.get('user_id'),
+        'soil_data': request.session.get('soil_data'),
+        'last_diagnosis': request.session.get('last_diagnosis')
+    }
+
 @app.get('/report', response_class=HTMLResponse)
 def report_get(request: Request, format: str = None):
     if not _logged_in(request):
@@ -398,7 +464,7 @@ def report_get(request: Request, format: str = None):
     if not request.session.get('farmer_id'):
         return _redirect('home')
     if format == 'json' or request.headers.get('accept') == 'application/json':
-        report_data = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
+        report_data = orchestrator.route_request('report', _get_report_context(request))
         return JSONResponse(report_data)
     return _render(request, 'report.html')
 
@@ -409,7 +475,7 @@ async def report_post(request: Request):
     if not request.session.get('farmer_id'):
         return JSONResponse({'error': 'No farmer profile'}, status_code=400)
 
-    report_data = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
+    report_data = orchestrator.route_request('report', _get_report_context(request))
     return JSONResponse(report_data)
 
 @app.post('/generate-report')
@@ -419,8 +485,51 @@ async def generate_report_post(request: Request):
     if not request.session.get('farmer_id'):
         return JSONResponse({'error': 'No farmer profile'}, status_code=400)
 
-    report_data = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
+    report_data = orchestrator.route_request('report', _get_report_context(request))
     return JSONResponse(report_data)
+
+
+@app.post('/send-report-email')
+async def send_report_email_post(request: Request):
+    if not _logged_in(request):
+        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
+    if not request.session.get('farmer_id'):
+        return JSONResponse({'error': 'No farmer profile found. Please complete farm intake.'}, status_code=400)
+
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+
+    recipient_email = (data.get('recipient_email') or '').strip()
+    subject = (data.get('subject') or 'SuperFarmer - Field Advisory Report').strip()
+    custom_notes = (data.get('notes') or '').strip()
+
+    # Strict email validation
+    if not recipient_email or not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', recipient_email):
+        return JSONResponse({'error': 'Please enter a valid recipient email address.'}, status_code=400)
+
+    from agents.agents import ReportAgent, EmailAgent
+    report_data = orchestrator.route_request('report', _get_report_context(request))
+    html_body = ReportAgent.build_html_email(report_data, custom_notes=custom_notes)
+
+    # Deliver via EmailAgent
+    success = EmailAgent.send_email(
+        to_email=recipient_email,
+        subject=subject,
+        body=html_body,
+        image_path=DEFAULT_NOTIFICATION_IMAGE
+    )
+
+    if success:
+        return JSONResponse({
+            'success': True,
+            'message': f'Field Advisory Report sent successfully to {recipient_email}!'
+        })
+    else:
+        return JSONResponse({
+            'error': 'Failed to send email. Please check server email credentials or network connection.'
+        }, status_code=500)
 
 
 
