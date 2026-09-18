@@ -7,18 +7,97 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 
 <style>
-/* ── Crop-plant animation keyframes ── */
-@keyframes sway { 0%,100%{transform:translateZ(var(--h)) rotate(-3deg);}50%{transform:translateZ(var(--h)) rotate(3deg);}}
-@keyframes pulse-glow { 0%,100%{box-shadow:0 0 8px 3px var(--glow),inset 0 0 5px rgba(255,255,255,0.3);} 50%{box-shadow:0 0 16px 6px var(--glow),inset 0 0 10px rgba(255,255,255,0.5);}}
-@keyframes bob { 0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
-.plant-node { transition: transform 0.2s ease; }
-.plant-node:hover { transform: scale(1.3) !important; z-index: 9999 !important; }
-.plant-stalk-3d { transform-style: preserve-3d; }
-#legend-panel { display:none; flex-wrap:wrap; gap:10px; padding:16px 20px; background:#fff;
-    border:1px solid #e2e8f0; border-radius:10px; margin-top:1rem;
-    box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-.legend-item { display:flex; align-items:center; gap:7px; font-size:0.88rem; font-weight:600; color:#334155; }
-.legend-dot { width:18px; height:18px; border-radius:50%; border:2px solid rgba(0,0,0,0.15); }
+    /* ── Crop-plant animation keyframes ── */
+    @keyframes sway {
+
+        0%,
+        100% {
+            transform: translateZ(var(--h)) rotate(-3deg);
+        }
+
+        50% {
+            transform: translateZ(var(--h)) rotate(3deg);
+        }
+    }
+
+    @keyframes pulse-glow {
+
+        0%,
+        100% {
+            box-shadow: 0 0 8px 3px var(--glow), inset 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+
+        50% {
+            box-shadow: 0 0 16px 6px var(--glow), inset 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+    }
+
+    @keyframes bob {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-4px);
+        }
+    }
+
+    .plant-node {
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        contain: layout style;
+    }
+
+    .plant-node:hover {
+        transform: scale(1.4) !important;
+        z-index: 9999 !important;
+    }
+
+    .plant-wrap-3d {
+        transform-style: preserve-3d;
+        contain: layout style;
+        will-change: transform;
+        transition: z-index 0.2s;
+    }
+
+    .plant-wrap-3d:hover {
+        z-index: 99999 !important;
+    }
+
+    .plant-badge-3d {
+        transform-style: preserve-3d;
+        will-change: transform;
+    }
+
+
+    #legend-panel {
+        display: none;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 16px 20px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        margin-top: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    .legend-dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 2px solid rgba(0, 0, 0, 0.15);
+    }
 </style>
 
 <div class="card" style="margin-bottom: 2rem;">
@@ -26,45 +105,59 @@
     <p>Generate an AI-powered, 3D multi-crop layout tailored to your soil, water, and acreage.</p>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
-    
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; align-items: start;">
+
     <!-- MAP PANEL -->
     <div class="card" style="padding: 1.5rem;">
-        <h3 style="margin-bottom: 1rem; color: #475569; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <h3
+            style="margin-bottom: 1rem; color: #475569; display: flex; align-items: center; justify-content: center; gap: 10px;">
             <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
             Select Your Land on Map
             <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
         </h3>
-        
-        <div id="map" style="height: 380px; border-radius: 8px; border: 2px solid var(--border);"></div>
-        
-        <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            <div style="font-size: 1.1rem; color: #334155;">Farm Area Selected: <br><strong id="acres_display" style="font-size: 1.4rem; color: var(--primary);">0.00 Acres</strong></div>
-            <button class="btn" style="padding: 0.8rem 2rem; font-size: 1.1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">Confirm</button>
+
+        <!-- MAP -->
+        <div id="map" style="height: 420px; border-radius: 8px; border: 2px solid var(--border);"></div>
+
+        <div
+            style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 1rem; color: #334155;">Farm Area: <strong id="acres_display"
+                    style="font-size: 1.3rem; color: var(--primary);">0.00 Acres</strong></div>
+            <button class="btn" style="padding: 0.6rem 1.4rem; font-size: 1rem;">✔ Confirm</button>
         </div>
     </div>
 
     <!-- 2D LAYOUT PANEL -->
     <div class="card" style="padding: 1.5rem; display: flex; flex-direction: column;">
-        <h3 style="margin-bottom: 1rem; color: #475569; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <h3
+            style="margin-bottom: 1rem; color: #475569; display: flex; align-items: center; justify-content: center; gap: 10px;">
             <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
             2D Farm Layout Planning
             <span style="border-top: 1px solid #cbd5e1; flex-grow: 1;"></span>
         </h3>
-        
-        <div id="grid-layout-container" style="flex-grow: 1; position: relative; overflow: hidden; background: #f1f5f9; padding: 0px; border-radius: 8px; border: 1px solid #cbd5e1; min-height: 500px; width: 800px; margin: 0 auto; box-sizing: border-box;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 1.1rem; text-align: center; width: 100%;">
+
+        <!-- 2D canvas fills the card width, same height as the map -->
+        <div id="grid-layout-container"
+            style="position: relative; overflow: hidden; background: #f1f5f9; border-radius: 8px; border: 1px solid #cbd5e1; height: 420px; width: 100%; box-sizing: border-box;">
+            <div
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 1rem; text-align: center; width: 100%;">
                 Select a crop and click Optimize Layout
             </div>
         </div>
-        
+
         <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
             <div style="display: flex; gap: 0.5rem; justify-content: space-between;">
-                <button class="btn layout-btn" onclick="setLayout('Grid Layout', this)" style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">🔲 Grid Layout</button>
-                <button class="btn layout-btn" onclick="setLayout('Strip Layout', this)" style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">⏸ Strip Layout</button>
-                <button class="btn layout-btn" onclick="setLayout('Row Layout', this)" style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">☰ Row Layout</button>
+                <button class="btn layout-btn" onclick="setLayout('Grid Layout', this)"
+                    style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">🔲 Grid
+                    Layout</button>
+                <button class="btn layout-btn" onclick="setLayout('Strip Layout', this)"
+                    style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">⏸ Strip
+                    Layout</button>
+                <button class="btn layout-btn" onclick="setLayout('Row Layout', this)"
+                    style="flex:1; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;">☰ Row
+                    Layout</button>
             </div>
-            
+
             <div style="display: flex; gap: 1rem; align-items: center;">
                 <select id="main_crop" style="flex: 1; padding: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1;">
                     <option value="Auto">🤖 Auto-Recommend</option>
@@ -95,7 +188,9 @@
                         <option value="Marigold">🌼 Marigold</option>
                     </optgroup>
                 </select>
-                <button class="btn" onclick="generateTwin()" style="background-color: var(--primary); font-weight: bold; padding: 0.8rem 1.5rem; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.4);">Optimize Layout</button>
+                <button class="btn" onclick="generateTwin()"
+                    style="background-color: var(--primary); font-weight: bold; padding: 0.8rem 1.5rem; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.4);">Optimize
+                    Layout</button>
             </div>
         </div>
     </div>
@@ -110,33 +205,54 @@
             <span style="border-top: 1px solid #cbd5e1; width:60px; display:inline-block;"></span>
         </h3>
         <div style="display:flex;gap:8px;">
-            <button onclick="resetView()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;font-size:0.8rem;cursor:pointer;">⟳ Reset View</button>
-            <span style="background:#ecfdf5;color:#16a34a;border-radius:6px;padding:6px 12px;font-size:0.8rem;font-weight:600;">🖱 Drag to rotate · Scroll to zoom</span>
+            <button onclick="resetView()"
+                style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;padding:6px 12px;font-size:0.8rem;cursor:pointer;">⟳
+                Reset View</button>
+            <span
+                style="background:#ecfdf5;color:#16a34a;border-radius:6px;padding:6px 12px;font-size:0.8rem;font-weight:600;">🖱
+                Drag to rotate · Scroll to zoom</span>
         </div>
     </div>
 
     <!-- CSS 3D Space -->
-    <div id="isometric-wrapper" style="perspective: 1800px; padding: 3rem 0 7rem 0; display: flex; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #e0f2fe 0%, #f8fafc 60%, #e5e7eb 100%); overflow: hidden; cursor: grab; border-radius:10px; border:1px solid #e2e8f0;">
+    <div id="isometric-wrapper"
+        style="perspective: 1800px; padding: 3rem 0 7rem 0; display: flex; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #e0f2fe 0%, #f8fafc 60%, #e5e7eb 100%); overflow: hidden; cursor: grab; border-radius:10px; border:1px solid #e2e8f0;">
         <!-- The Isometric Floor Plane -->
-        <div id="isometric-floor" style="width: 800px; height: 500px; transform: rotateX(60deg) rotateZ(-45deg); border-radius: 14px; box-shadow: -30px 40px 70px rgba(0,0,0,0.2); position: relative; overflow: visible; transform-style: preserve-3d; margin: 0 auto; background: repeating-conic-gradient(#a7c47a 0% 25%, #8fb56a 25% 50%) 0 0 / 40px 40px;">
+        <div id="isometric-floor"
+            style="width: 800px; height: 500px; transform: rotateX(60deg) rotateZ(-45deg); border-radius: 14px; box-shadow: -30px 40px 70px rgba(0,0,0,0.2); position: relative; overflow: visible; transform-style: preserve-3d; margin: 0 auto; background: repeating-conic-gradient(#a7c47a 0% 25%, #8fb56a 25% 50%) 0 0 / 40px 40px;">
 
             <!-- Soil border frame -->
-            <div style="position:absolute;inset:0;border-radius:14px;border:6px solid #5c3d1a;box-shadow:inset 0 0 30px rgba(0,0,0,0.2);"></div>
+            <div
+                style="position:absolute;inset:0;border-radius:14px;border:6px solid #5c3d1a;box-shadow:inset 0 0 30px rgba(0,0,0,0.2);">
+            </div>
 
             <!-- Water tank (blue sphere) -->
-            <div style="position: absolute; top: -70px; right: 30px; width: 55px; height: 55px; background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8); border-radius: 50%; box-shadow: -5px 8px 20px rgba(0,0,0,0.4); transform: translateZ(60px); z-index:20;"></div>
+            <div
+                style="position: absolute; top: -70px; right: 30px; width: 55px; height: 55px; background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8); border-radius: 50%; box-shadow: -5px 8px 20px rgba(0,0,0,0.4); transform: translateZ(60px); z-index:20;">
+            </div>
             <!-- Water tank label -->
-            <div style="position:absolute;top:-92px;right:12px;font-size:0.6rem;font-weight:700;color:#1d4ed8;transform:translateZ(60px);z-index:20;text-shadow:0 1px 2px #fff;">💧 Tank</div>
+            <div
+                style="position:absolute;top:-92px;right:12px;font-size:0.6rem;font-weight:700;color:#1d4ed8;transform:translateZ(60px);z-index:20;text-shadow:0 1px 2px #fff;">
+                💧 Tank</div>
 
             <!-- Barn -->
-            <div style="position: absolute; top: -130px; right: 100px; width: 90px; height: 70px; background: linear-gradient(180deg,#b45309,#92400e); border-radius: 4px; box-shadow: -6px 10px 25px rgba(0,0,0,0.45); transform: translateZ(55px); z-index:20;">
-                <div style="position:absolute;top:-22px;left:-6px;right:-6px;height:26px;background:linear-gradient(160deg,#dc2626,#991b1b);clip-path:polygon(0 100%,50% 0,100% 100%); border-radius:2px;"></div>
-                <div style="position:absolute;bottom:0;left:30%;width:40%;height:55%;background:#451a03;border-radius:2px 2px 0 0;"></div>
+            <div
+                style="position: absolute; top: -130px; right: 100px; width: 90px; height: 70px; background: linear-gradient(180deg,#b45309,#92400e); border-radius: 4px; box-shadow: -6px 10px 25px rgba(0,0,0,0.45); transform: translateZ(55px); z-index:20;">
+                <div
+                    style="position:absolute;top:-22px;left:-6px;right:-6px;height:26px;background:linear-gradient(160deg,#dc2626,#991b1b);clip-path:polygon(0 100%,50% 0,100% 100%); border-radius:2px;">
+                </div>
+                <div
+                    style="position:absolute;bottom:0;left:30%;width:40%;height:55%;background:#451a03;border-radius:2px 2px 0 0;">
+                </div>
             </div>
-            <div style="position:absolute;top:-148px;right:90px;font-size:0.6rem;font-weight:700;color:#92400e;transform:translateZ(55px);z-index:20;text-shadow:0 1px 2px #fff;">🏠 Barn</div>
+            <div
+                style="position:absolute;top:-148px;right:90px;font-size:0.6rem;font-weight:700;color:#92400e;transform:translateZ(55px);z-index:20;text-shadow:0 1px 2px #fff;">
+                🏠 Barn</div>
 
             <!-- Waiting label -->
-            <div id="waiting-label-3d" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg); font-size: 1.4rem; color: #6b7280; font-weight: bold; z-index: 10; white-space:nowrap;">🌱 Waiting for generation...</div>
+            <div id="waiting-label-3d"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg); font-size: 1.4rem; color: #6b7280; font-weight: bold; z-index: 10; white-space:nowrap;">
+                🌱 Waiting for generation...</div>
         </div>
     </div>
 
@@ -144,7 +260,29 @@
     <div id="legend-panel"></div>
 
     <!-- Display Details -->
-    <div id="analysis_result" style="display: none; margin-top: 1.5rem; padding: 2rem; background: linear-gradient(135deg,#f0fdf4,#ecfdf5); border-left: 5px solid var(--primary); border-radius: 10px; font-size: 1.05rem; line-height: 1.7; box-shadow: 0 4px 12px rgba(22,163,74,0.08);"></div>
+    <div id="analysis_result"
+        style="display: none; margin-top: 1.5rem; padding: 2rem; background: linear-gradient(135deg,#f0fdf4,#ecfdf5); border-left: 5px solid var(--primary); border-radius: 10px; font-size: 1.05rem; line-height: 1.7; box-shadow: 0 4px 12px rgba(22,163,74,0.08);">
+    </div>
+</div>
+
+<!-- 🧠 MEMORY DECISIONS PANEL -->
+<div id="memory-panel" style="display:none; margin-top:1.5rem;">
+    <div class="card" style="padding:1.5rem; border-left: 5px solid #7c3aed;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <h3 style="margin:0;color:#5b21b6;font-size:1.1rem;display:flex;align-items:center;gap:8px;">🧠
+                Memory-Driven Decisions</h3>
+            <div id="soil-impact-badge" style="padding:4px 14px;border-radius:20px;font-size:0.82rem;font-weight:700;">
+            </div>
+        </div>
+        <!-- Crop Override Alert -->
+        <div id="override-notice"
+            style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:1rem;">
+        </div>
+        <!-- Memory Log Timeline -->
+        <div id="memory-log-steps" style="margin-bottom:1rem;"></div>
+        <!-- Warnings -->
+        <div id="memory-warnings"></div>
+    </div>
 </div>
 
 <!-- Scripts for Map and Rendering -->
@@ -154,7 +292,7 @@
 <script>
     // 1. Initialize Map
     const map = L.map('map').setView([20.5937, 78.9629], 5); // Default India map
-    
+
     // Using Esri Satellite Map
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         attribution: 'Tiles &copy; Esri'
@@ -167,12 +305,12 @@
 
     // Add Geocoder
     L.Control.geocoder({ defaultMarkGeocode: false })
-      .on('markgeocode', function(e) { map.fitBounds(e.geocode.bbox); })
-      .addTo(map);
+        .on('markgeocode', function (e) { map.fitBounds(e.geocode.bbox); })
+        .addTo(map);
 
     // Add Locate Me button
-    const locateControl = L.control({position: 'topleft'});
-    locateControl.onAdd = function() {
+    const locateControl = L.control({ position: 'topleft' });
+    locateControl.onAdd = function () {
         const btn = L.DomUtil.create('button', 'btn');
         btn.innerHTML = '📍 Locate Me';
         btn.style.backgroundColor = 'white';
@@ -180,7 +318,7 @@
         btn.style.cursor = 'pointer';
         btn.style.padding = '5px 8px';
         btn.style.borderRadius = '4px';
-        btn.onclick = function() { map.locate({setView: true, maxZoom: 16}); };
+        btn.onclick = function () { map.locate({ setView: true, maxZoom: 16 }); };
         return btn;
     };
     locateControl.addTo(map);
@@ -210,17 +348,17 @@
         drawnItems.clearLayers();
         const layer = e.layer;
         drawnItems.addLayer(layer);
-        
+
         // Leaflet area calculation returns square meters
         const latlngs = layer.getLatLngs()[0];
         const areaSqMeters = L.GeometryUtil.geodesicArea(latlngs);
-        
+
         // 1 sq meter = 0.000247105 acres
         currentAcres = (areaSqMeters * 0.000247105).toFixed(2);
-        
+
         // Guard against massive drawings crashing AI limits
-        if(currentAcres > 100000) currentAcres = 100000;
-        
+        if (currentAcres > 100000) currentAcres = 100000;
+
         document.getElementById('acres_display').innerText = currentAcres + ' Acres';
     });
 
@@ -242,25 +380,25 @@
     // Default select Grid Layout
     document.querySelector('.layout-btn').click();
 
-    // ── Crop Visual Library ────────────────────────────────────────
+    // ── Crop Visual Library (Rich Visual Identities for All Crops) ──
     const CROP_VISUALS = {
-        'Corn':      { emoji:'🌽', glow:'rgba(22,163,74,0.6)',  stalkColor:'#15803d', canopyColor:'#4ade80', canopyShape:'tall',   canopySize:1.2 },
-        'Tomato':    { emoji:'🍅', glow:'rgba(239,68,68,0.6)',  stalkColor:'#b91c1c', canopyColor:'#f87171', canopyShape:'round',  canopySize:1.0 },
-        'Wheat':     { emoji:'🌾', glow:'rgba(234,179,8,0.5)',  stalkColor:'#854d0e', canopyColor:'#fde047', canopyShape:'wisp',   canopySize:0.7 },
-        'Rice':      { emoji:'🌾', glow:'rgba(52,211,153,0.5)', stalkColor:'#065f46', canopyColor:'#6ee7b7', canopyShape:'wisp',   canopySize:0.8 },
-        'Sugarcane': { emoji:'🎋', glow:'rgba(132,204,22,0.6)', stalkColor:'#3f6212', canopyColor:'#bef264', canopyShape:'tall',   canopySize:1.4 },
-        'Cotton':    { emoji:'🪴', glow:'rgba(226,232,240,0.7)',stalkColor:'#475569', canopyColor:'#f1f5f9', canopyShape:'round',  canopySize:1.0 },
-        'Soybean':   { emoji:'🫘', glow:'rgba(163,230,53,0.5)', stalkColor:'#3a5c0e', canopyColor:'#a3e635', canopyShape:'bush',   canopySize:0.9 },
-        'Maize':     { emoji:'🌽', glow:'rgba(250,204,21,0.6)', stalkColor:'#713f12', canopyColor:'#fbbf24', canopyShape:'tall',   canopySize:1.1 },
-        'Onion':     { emoji:'🧅', glow:'rgba(192,132,252,0.5)',stalkColor:'#6b21a8', canopyColor:'#d8b4fe', canopyShape:'bulb',   canopySize:0.7 },
-        'Garlic':    { emoji:'🧄', glow:'rgba(226,232,240,0.6)',stalkColor:'#64748b', canopyColor:'#e2e8f0', canopyShape:'bulb',   canopySize:0.6 },
-        'Marigold':  { emoji:'🌼', glow:'rgba(249,115,22,0.7)', stalkColor:'#9a3412', canopyColor:'#fb923c', canopyShape:'flower', canopySize:0.8 },
-        'Groundnut': { emoji:'🥜', glow:'rgba(217,119,6,0.6)',  stalkColor:'#78350f', canopyColor:'#fbbf24', canopyShape:'bush',   canopySize:0.8 },
-        'Mustard':   { emoji:'🌿', glow:'rgba(254,240,138,0.6)',stalkColor:'#713f12', canopyColor:'#fef08a', canopyShape:'wisp',   canopySize:0.9 },
-        'Chickpea':  { emoji:'🫘', glow:'rgba(253,230,138,0.5)',stalkColor:'#92400e', canopyColor:'#fde68a', canopyShape:'bush',   canopySize:0.8 },
-        'Potato':    { emoji:'🥔', glow:'rgba(167,139,250,0.5)',stalkColor:'#4c1d95', canopyColor:'#c4b5fd', canopyShape:'round',  canopySize:0.9 },
-        'Sunflower': { emoji:'🌻', glow:'rgba(251,191,36,0.7)', stalkColor:'#713f12', canopyColor:'#fbbf24', canopyShape:'flower', canopySize:1.2 },
-        'default':   { emoji:'🌱', glow:'rgba(74,222,128,0.5)', stalkColor:'#166534', canopyColor:'#4ade80', canopyShape:'round',  canopySize:1.0 },
+        'Corn':       { emoji: '🌽', glow: 'rgba(34,197,94,0.7)',  stalkColor: '#15803d', canopyColor: '#22c55e', accent: '#fde047', badge: '#14532d', leafShape: 'tall' },
+        'Tomato':     { emoji: '🍅', glow: 'rgba(239,68,68,0.75)', stalkColor: '#166534', canopyColor: '#ef4444', accent: '#fca5a5', badge: '#7f1d1d', leafShape: 'bush' },
+        'Wheat':      { emoji: '🌾', glow: 'rgba(234,179,8,0.75)', stalkColor: '#854d0e', canopyColor: '#eab308', accent: '#fef08a', badge: '#713f12', leafShape: 'wisp' },
+        'Rice':       { emoji: '🌾', glow: 'rgba(16,185,129,0.7)', stalkColor: '#065f46', canopyColor: '#10b981', accent: '#a7f3d0', badge: '#064e3b', leafShape: 'wisp' },
+        'Sugarcane':  { emoji: '🎋', glow: 'rgba(132,204,22,0.75)',stalkColor: '#3f6212', canopyColor: '#84cc16', accent: '#bef264', badge: '#365314', leafShape: 'tall' },
+        'Cotton':     { emoji: '🪴', glow: 'rgba(241,245,249,0.85)',stalkColor: '#475569', canopyColor: '#f8fafc', accent: '#e2e8f0', badge: '#334155', leafShape: 'bush' },
+        'Soybean':    { emoji: '🫘', glow: 'rgba(132,204,22,0.7)', stalkColor: '#365314', canopyColor: '#84cc16', accent: '#d9f99d', badge: '#3f6212', leafShape: 'bush' },
+        'Maize':      { emoji: '🌽', glow: 'rgba(250,204,21,0.75)',stalkColor: '#713f12', canopyColor: '#facc15', accent: '#fef08a', badge: '#78350f', leafShape: 'tall' },
+        'Onion':      { emoji: '🧅', glow: 'rgba(192,132,252,0.75)',stalkColor: '#15803d', canopyColor: '#c084fc', accent: '#e9d5ff', badge: '#581c87', leafShape: 'bulb' },
+        'Garlic':     { emoji: '🧄', glow: 'rgba(226,232,240,0.75)',stalkColor: '#166534', canopyColor: '#e2e8f0', accent: '#ffffff', badge: '#334155', leafShape: 'bulb' },
+        'Marigold':   { emoji: '🌼', glow: 'rgba(249,115,22,0.9)', stalkColor: '#9a3412', canopyColor: '#f97316', accent: '#fed7aa', badge: '#7c2d12', leafShape: 'flower' },
+        'Groundnut':  { emoji: '🥜', glow: 'rgba(217,119,6,0.75)', stalkColor: '#78350f', canopyColor: '#d97706', accent: '#fde68a', badge: '#78350f', leafShape: 'bush' },
+        'Mustard':    { emoji: '🌿', glow: 'rgba(250,204,21,0.8)', stalkColor: '#713f12', canopyColor: '#eab308', accent: '#fef08a', badge: '#713f12', leafShape: 'wisp' },
+        'Chickpea':   { emoji: '🫘', glow: 'rgba(245,158,11,0.75)',stalkColor: '#92400e', canopyColor: '#d97706', accent: '#fde68a', badge: '#78350f', leafShape: 'bush' },
+        'Potato':     { emoji: '🥔', glow: 'rgba(168,85,247,0.7)', stalkColor: '#4c1d95', canopyColor: '#a855f7', accent: '#e9d5ff', badge: '#581c87', leafShape: 'bush' },
+        'Sunflower':  { emoji: '🌻', glow: 'rgba(245,158,11,0.85)',stalkColor: '#713f12', canopyColor: '#eab308', accent: '#fef08a', badge: '#78350f', leafShape: 'flower' },
+        'default':    { emoji: '🌱', glow: 'rgba(74,222,128,0.6)', stalkColor: '#166534', canopyColor: '#22c55e', accent: '#86efac', badge: '#14532d', leafShape: 'bush' },
     };
 
     function getVisual(type) { return CROP_VISUALS[type] || CROP_VISUALS['default']; }
@@ -268,121 +406,186 @@
     // Build 2D plant node (emoji badge + glowing aura)
     function make2DPlant(cell) {
         const v = getVisual(cell.type);
-        const r = cell.radius;
+        const r = Math.max(6, cell.radius);
         const el = document.createElement('div');
         el.className = 'plant-node';
         el.title = `${v.emoji} ${cell.type}`;
         el.style.cssText = `
             position:absolute;
             left:${cell.x - r}px; top:${cell.y - r}px;
-            width:${r*2}px; height:${r*2}px;
+            width:${r * 2}px; height:${r * 2}px;
             border-radius:50%;
-            background:radial-gradient(circle at 38% 35%, ${v.canopyColor}, ${cell.color});
+            background:radial-gradient(circle at 38% 35%, ${v.accent}, ${v.canopyColor} 60%, ${v.badge});
             --glow:${v.glow};
-            box-shadow:0 0 8px 3px ${v.glow}, inset 0 0 5px rgba(255,255,255,0.3);
+            box-shadow:0 0 10px 3px ${v.glow}, inset 0 0 5px rgba(255,255,255,0.4);
             animation:pulse-glow ${1.8 + Math.random()}s ease-in-out infinite;
             display:flex;align-items:center;justify-content:center;
-            font-size:${Math.max(8,r*0.9)}px;
+            font-size:${Math.max(9, r * 0.95)}px;
             cursor:pointer;
             z-index:2;
         `;
-        el.textContent = r > 9 ? v.emoji : '';
+        el.textContent = v.emoji;
         return el;
     }
 
-    // Build 3D plant node (shadow disc + stalk + canopy shape)
+    // Build Rich 3D Plant Node (Glowing Soil Mound + 3D Stalk + Volumetric Leaves + Floating 3D Badge + Tooltip)
     function make3DPlant(cell) {
         const v = getVisual(cell.type);
-        const r = cell.radius;
+        const r = Math.max(7, cell.radius);
         const hM = cell.height_m || 1.0;
-        const stalkH = Math.max(14, hM * 18);  // px
-        const canopyR = r * v.canopySize;
+        const stalkH = Math.min(46, Math.max(16, hM * 18));
+        const isBorder = !!cell.border;
 
         const wrap = document.createElement('div');
-        wrap.title = `${v.emoji} ${cell.type}`;
+        wrap.className = 'plant-wrap-3d';
         wrap.style.cssText = `
-            position:absolute;
-            left:${cell.x - r}px; top:${cell.y - r}px;
-            width:${r*2}px; height:${r*2}px;
-            transform-style:preserve-3d;
+            position: absolute;
+            left: ${cell.x - r}px;
+            top: ${cell.y - r}px;
+            width: ${r * 2}px;
+            height: ${r * 2}px;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            z-index: ${Math.round(cell.y)};
         `;
 
-        // Ground shadow disc
-        const shadow = document.createElement('div');
-        shadow.style.cssText = `
-            position:absolute; inset:0; border-radius:50%;
-            background:radial-gradient(circle, rgba(0,0,0,0.35) 0%, transparent 75%);
+        // 1. Soil Mound Base (Floor-level circular glow ring)
+        const soilMound = document.createElement('div');
+        soilMound.className = 'plant-mound-3d';
+        soilMound.style.cssText = `
+            position: absolute;
+            inset: -2px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 38% 35%, ${v.accent} 0%, ${v.canopyColor} 45%, ${v.badge} 85%, rgba(0,0,0,0.5) 100%);
+            box-shadow: 0 0 10px 3px ${v.glow}, 0 2px 6px rgba(0,0,0,0.35);
+            opacity: ${isBorder ? '0.95' : '0.88'};
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
         `;
-        wrap.appendChild(shadow);
+        wrap.appendChild(soilMound);
 
-        // Stalk  
+        // 2. Upright 3D Vertical Stalk
+        const stalkW = Math.max(3, Math.min(6, r * 0.28));
         const stalk = document.createElement('div');
-        const stalkW = Math.max(3, r * 0.28);
         stalk.style.cssText = `
-            position:absolute;
-            left:50%; bottom:40%;
-            width:${stalkW}px; height:${stalkH}px;
-            margin-left:${-stalkW/2}px;
-            background:linear-gradient(to top, ${v.stalkColor}, ${v.canopyColor});
-            border-radius:${stalkW}px;
-            transform:rotateX(-90deg);
-            transform-style:preserve-3d;
-            transform-origin:bottom center;
-            --h:${stalkH}px;
-            animation:sway ${2 + Math.random()*2}s ease-in-out infinite;
+            position: absolute;
+            left: 50%;
+            bottom: 50%;
+            width: ${stalkW}px;
+            height: ${stalkH}px;
+            margin-left: ${-stalkW / 2}px;
+            background: linear-gradient(to top, ${v.stalkColor}, ${v.canopyColor});
+            border-radius: ${stalkW}px;
+            transform-origin: bottom center;
+            transform: rotateX(-90deg);
+            transform-style: preserve-3d;
+            box-shadow: 0 0 3px rgba(0,0,0,0.25);
         `;
+
+        // 3. Volumetric Cross-Plane Leaves (Front Plane)
+        const leafW = r * 1.5 + stalkW;
+        const leafH = stalkH * 0.58;
+        const leafPlane1 = document.createElement('div');
+        leafPlane1.style.cssText = `
+            position: absolute;
+            bottom: 20%;
+            left: ${-(leafW - stalkW) / 2}px;
+            width: ${leafW}px;
+            height: ${leafH}px;
+            background: radial-gradient(ellipse at 50% 40%, ${v.accent} 0%, ${v.canopyColor} 60%, ${v.stalkColor} 100%);
+            border-radius: 50% 50% 30% 30%;
+            opacity: 0.9;
+        `;
+        stalk.appendChild(leafPlane1);
+
+        // Volumetric Cross-Plane Leaves (Side Plane rotated 90deg)
+        const leafPlane2 = document.createElement('div');
+        leafPlane2.style.cssText = `
+            position: absolute;
+            bottom: 20%;
+            left: ${-(leafW - stalkW) / 2}px;
+            width: ${leafW}px;
+            height: ${leafH}px;
+            background: radial-gradient(ellipse at 50% 40%, ${v.accent} 0%, ${v.canopyColor} 60%, ${v.stalkColor} 100%);
+            border-radius: 50% 50% 30% 30%;
+            opacity: 0.9;
+            transform: rotateY(90deg);
+        `;
+        stalk.appendChild(leafPlane2);
         wrap.appendChild(stalk);
 
-        // Canopy (shape varies by crop type)
-        const canopy = document.createElement('div');
-        const cs = v.canopyShape;
-        let canopyCSS = '';
-        if (cs === 'tall') {
-            canopyCSS = `
-                width:${canopyR*1.2}px; height:${canopyR*2.5}px;
-                border-radius:50% 50% 20% 20%;
-                left:${r - canopyR*0.6}px;
-                background:radial-gradient(ellipse at 40% 30%, ${v.canopyColor}, ${v.stalkColor});
-            `;
-        } else if (cs === 'flower') {
-            canopyCSS = `
-                width:${canopyR*2.2}px; height:${canopyR*2.2}px;
-                border-radius:50%;
-                left:${r - canopyR*1.1}px;
-                background:radial-gradient(circle at 40% 40%, #fef9c3, ${v.canopyColor} 55%, ${v.stalkColor});
-                box-shadow:0 0 8px 4px ${v.glow};
-            `;
-        } else if (cs === 'bulb') {
-            canopyCSS = `
-                width:${canopyR*1.5}px; height:${canopyR*1.8}px;
-                border-radius:50% 50% 40% 40%;
-                left:${r - canopyR*0.75}px;
-                background:radial-gradient(ellipse at 40% 30%, #ffffffaa, ${v.canopyColor});
-            `;
-        } else if (cs === 'wisp') {
-            canopyCSS = `
-                width:${canopyR}px; height:${canopyR*2}px;
-                border-radius:50% 50% 20% 20%;
-                left:${r - canopyR*0.5}px;
-                background:linear-gradient(to top, ${v.stalkColor}, ${v.canopyColor});
-            `;
-        } else {  // round / bush default
-            canopyCSS = `
-                width:${canopyR*2}px; height:${canopyR*2}px;
-                border-radius:50%;
-                left:${r - canopyR}px;
-                background:radial-gradient(circle at 38% 32%, ${v.canopyColor}, ${v.stalkColor});
-            `;
-        }
-        canopy.style.cssText = `
-            position:absolute;
-            bottom:${r*0.55 + stalkH*0.72}px;
-            transform:rotateX(-90deg) translateZ(0);
-            transform-style:preserve-3d;
-            transform-origin:bottom center;
-            ${canopyCSS}
+        // 4. Elevated 3D Billboarded Badge (Facing isometric camera with crystal clarity)
+        const badgeSize = Math.max(20, Math.min(28, r * 1.4));
+        const badge = document.createElement('div');
+        badge.className = 'plant-badge-3d';
+        badge.style.cssText = `
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: ${badgeSize}px;
+            height: ${badgeSize}px;
+            margin-left: ${-badgeSize / 2}px;
+            margin-top: ${-badgeSize / 2}px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, ${v.accent}, ${v.canopyColor} 60%, ${v.badge});
+            border: 2px solid rgba(255,255,255,0.9);
+            box-shadow: 0 0 12px 4px ${v.glow}, 0 4px 10px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: ${Math.max(11, badgeSize * 0.58)}px;
+            transform: translateZ(${stalkH + 8}px) rotateZ(45deg) rotateX(-60deg);
+            transform-style: preserve-3d;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 15;
+            pointer-events: none;
         `;
-        wrap.appendChild(canopy);
+        badge.textContent = v.emoji;
+        wrap.appendChild(badge);
+
+        // 5. 3D Floating Tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'plant-tooltip-3d';
+        tooltip.style.cssText = `
+            position: absolute;
+            left: 50%;
+            bottom: 100%;
+            transform: translate(-50%, -10px) translateZ(${stalkH + 24}px) rotateZ(45deg) rotateX(-60deg);
+            background: rgba(15, 23, 42, 0.94);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.25);
+            z-index: 100;
+        `;
+        tooltip.innerHTML = `
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:1rem;">${v.emoji}</span>
+                <strong style="color:${v.accent};font-size:0.85rem;">${cell.type}</strong>
+                ${cell.border ? '<span style="background:#ea580c;color:#fff;font-size:0.6rem;padding:2px 6px;border-radius:10px;font-weight:700;">Border</span>' : ''}
+            </div>
+            <div style="font-size:0.68rem;color:#94a3b8;margin-top:3px;">Height: ${hM}m · ${cell.row >= 0 ? 'Row ' + (cell.row + 1) : 'Perimeter Defense'}</div>
+        `;
+        wrap.appendChild(tooltip);
+
+        // Hover animation triggers
+        wrap.addEventListener('mouseenter', () => {
+            tooltip.style.opacity = '1';
+            badge.style.transform = `translateZ(${stalkH + 16}px) rotateZ(45deg) rotateX(-60deg) scale(1.35)`;
+            soilMound.style.boxShadow = `0 0 20px 8px ${v.glow}, 0 4px 12px rgba(0,0,0,0.5)`;
+        });
+        wrap.addEventListener('mouseleave', () => {
+            tooltip.style.opacity = '0';
+            badge.style.transform = `translateZ(${stalkH + 8}px) rotateZ(45deg) rotateX(-60deg) scale(1)`;
+            soilMound.style.boxShadow = `0 0 10px 3px ${v.glow}, 0 2px 6px rgba(0,0,0,0.35)`;
+        });
+
         return wrap;
     }
 
@@ -400,24 +603,29 @@
         container3D.innerHTML = `
             <div style="position:absolute;inset:0;border-radius:14px;border:6px solid #5c3d1a;box-shadow:inset 0 0 30px rgba(0,0,0,0.2);"></div>
             <div style="position:absolute;top:-70px;right:30px;width:55px;height:55px;background:radial-gradient(circle at 35% 35%,#60a5fa,#1d4ed8);border-radius:50%;box-shadow:-5px 8px 20px rgba(0,0,0,0.4);transform:translateZ(60px);z-index:20;"></div>
-            <div style="position:absolute;top:-92px;right:12px;font-size:0.6rem;font-weight:700;color:#1d4ed8;transform:translateZ(60px);z-index:20;">💧 Tank</div>
+            <div style="position:absolute;top:-92px;right:12px;font-size:0.6rem;font-weight:700;color:#1d4ed8;transform:translateZ(60px);z-index:20;text-shadow:0 1px 2px #fff;">💧 Tank</div>
             <div style="position:absolute;top:-130px;right:100px;width:90px;height:70px;background:linear-gradient(180deg,#b45309,#92400e);border-radius:4px;box-shadow:-6px 10px 25px rgba(0,0,0,0.45);transform:translateZ(55px);z-index:20;">
                 <div style="position:absolute;top:-22px;left:-6px;right:-6px;height:26px;background:linear-gradient(160deg,#dc2626,#991b1b);clip-path:polygon(0 100%,50% 0,100% 100%);border-radius:2px;"></div>
                 <div style="position:absolute;bottom:0;left:30%;width:40%;height:55%;background:#451a03;border-radius:2px 2px 0 0;"></div>
             </div>
+            <div style="position:absolute;top:-148px;right:90px;font-size:0.6rem;font-weight:700;color:#92400e;transform:translateZ(55px);z-index:20;text-shadow:0 1px 2px #fff;">🏠 Barn</div>
         `;
         analysisDiv.style.display = 'none';
         legendPanel.style.display = 'none';
 
+        // Measure actual canvas dimensions so nodes fill the real panel size
+        const canvasW = container2D.clientWidth || 450;
+        const canvasH = container2D.clientHeight || 420;
+
         fetch("/spatial-planner", {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 main_crop: crop,
                 layout_preference: currentLayoutPref,
                 acres: currentAcres ? parseFloat(currentAcres) : null,
-                width: 800,
-                height: 500
+                width: canvasW,
+                height: canvasH
             })
         }).then(async r => {
             if (!r.ok) { const t = await r.text(); throw new Error(`Server ${r.status}: ${t}`); }
@@ -441,19 +649,37 @@
                 // Zone label
                 const zl = document.createElement('div');
                 zl.textContent = getVisual(zone.crop).emoji + ' ' + zone.crop;
-                zl.style.cssText = `position:absolute;left:${zone.x+8}px;top:8px;font-size:0.75rem;font-weight:700;color:${zone.color};opacity:0.9;text-shadow:0 1px 2px #fff;`;
+                zl.style.cssText = `position:absolute;left:${zone.x + 8}px;top:8px;font-size:0.75rem;font-weight:700;color:${zone.color};opacity:0.9;text-shadow:0 1px 2px #fff;`;
                 container2D.appendChild(zl);
             });
 
-            // ── Plant nodes ──
-            // Build legend map
+            // ── Floor Dimensions & Coordinate Scaling for Full 3D Field Coverage ──
+            const floorW = container3D.clientWidth || 800;
+            const floorH = container3D.clientHeight || 500;
+            const scaleX = canvasW > 0 ? (floorW / canvasW) : 1;
+            const scaleY = canvasH > 0 ? (floorH / canvasH) : 1;
+
+            // ── Plant nodes (Batch rendering via DocumentFragment) ──
             const seenCrops = {};
+            const frag2D = document.createDocumentFragment();
+            const frag3D = document.createDocumentFragment();
 
             data.layout.forEach(cell => {
                 seenCrops[cell.type] = cell.color;
-                container2D.appendChild(make2DPlant(cell));
-                container3D.appendChild(make3DPlant(cell));
+                frag2D.appendChild(make2DPlant(cell));
+
+                // Scale cell coordinates to fill 100% of the 3D isometric floor
+                const cell3D = {
+                    ...cell,
+                    x: cell.x * scaleX,
+                    y: cell.y * scaleY,
+                    radius: Math.max(7, cell.radius * Math.min(scaleX, scaleY) * 0.92)
+                };
+                frag3D.appendChild(make3DPlant(cell3D));
             });
+
+            container2D.appendChild(frag2D);
+            container3D.appendChild(frag3D);
 
             // ── Legend ──
             legendPanel.style.display = 'flex';
@@ -466,27 +692,182 @@
                 legendPanel.appendChild(item);
             });
 
+
             // ── Analysis panel ──
             analysisDiv.style.display = 'block';
-            let htmlOut = '';
-            let formattedAnalysis = (data.analysis||'').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--primary);">$1</strong>').replace(/\n/g,'<br>');
-            htmlOut += `<div style="margin-bottom:16px;">${formattedAnalysis}</div>`;
-            if (data.insights) {
-                htmlOut += `
-                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-                    <span style="background:#eef2ff;color:#4f46e5;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">🌱 ${data.insights.total_plants} Plants</span>
-                    <span style="background:#f0fdf4;color:#16a34a;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">🌍 ${data.insights.land_efficiency}% Land Eff.</span>
-                    <span style="background:#ecfeff;color:#0891b2;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">💧 ${data.insights.water_saving_pct}% Water Saved</span>
-                    <span style="background:#fdf4ff;color:#c026d3;padding:5px 14px;border-radius:20px;font-size:0.9rem;font-weight:700;">🚀 ${data.insights.yield_boost_pct}% Yield Boost</span>
+            const ins = data.insights || {};
+            const score = data.layout_score || ins.layout_score || 0;
+            const scoreColor = score >= 80 ? '#16a34a' : score >= 55 ? '#d97706' : '#dc2626';
+            const scoreBg = score >= 80 ? '#f0fdf4' : score >= 55 ? '#fffbeb' : '#fef2f2';
+
+            let formattedAnalysis = (data.analysis || '')
+                .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--primary);">$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            // Farm Summary card with Real Commercial Field Scale
+            let htmlOut = `
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-size:0.75rem;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Main Crop</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#15803d;">${getVisual(data.main_crop).emoji} ${data.main_crop || '—'}</div>
                 </div>
-                <div style="background:#fff;padding:14px;border-radius:8px;border:1px solid #e2e8f0;">
+                <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-size:0.75rem;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Companion</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#b45309;">${getVisual(data.companion).emoji} ${data.companion || '—'}</div>
+                </div>
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-size:0.75rem;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Field Scale</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#1d4ed8;">🌍 ${data.land_size || '?'} acres</div>
+                    <div style="font-size:0.7rem;color:#64748b;">${ins.field_dim_m || ''}</div>
+                </div>
+                <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;text-align:center;">
+                    <div style="font-size:0.75rem;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Real Field Population</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#7e22ce;">🌱 ~${ins.total_real_plants ? ins.total_real_plants.toLocaleString() : (ins.interior_plants || 0)}</div>
+                    <div style="font-size:0.7rem;color:#9333ea;">${ins.visual_scale_ratio || ''}</div>
+                </div>
+            </div>`;
+
+            // Score + metric pills
+            htmlOut += `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+                <div style="background:${scoreBg};color:${scoreColor};padding:6px 16px;border-radius:20px;font-size:0.95rem;font-weight:800;border:2px solid ${scoreColor};">
+                    🏅 Layout Score: ${score}/100
+                </div>
+                <span style="background:#eef2ff;color:#4f46e5;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;">🖥️ Twin: ${ins.interior_plants || 0} nodes (${ins.visual_scale_ratio || 'Scaled Sector Grid'})</span>
+                <span style="background:#f0fdf4;color:#16a34a;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;">🌍 ${ins.land_efficiency || 0}% Land Eff.</span>
+                <span style="background:#ecfeff;color:#0891b2;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;">💧 ${ins.water_saving_pct || 0}% Water Saved</span>
+                <span style="background:#fdf4ff;color:#c026d3;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;">🚀 ${ins.yield_boost_pct || 0}% Yield Boost</span>
+                ${ins.total_row_km ? `<span style="background:#fffbeb;color:#b45309;padding:5px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;">📏 ${ins.total_rows} Rows (${ins.total_row_km} km)</span>` : ''}
+            </div>`;
+
+            // Analysis text
+            htmlOut += `<div style="background:#f8fafc;border-left:4px solid var(--primary);padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:14px;font-size:0.95rem;line-height:1.7;">${formattedAnalysis}</div>`;
+
+            // Zone allocation table
+            if (data.zone_yields && data.zone_yields.length) {
+                htmlOut += `<div style="margin-bottom:14px;">
+                    <h4 style="margin:0 0 8px;color:#475569;font-size:0.9rem;">📊 Commercial Zone Allocation &amp; Real Field Plant Counts</h4>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+                        <thead><tr style="background:#f1f5f9;">
+                            <th style="padding:7px 10px;text-align:left;border:1px solid #e2e8f0;color:#475569;">Crop</th>
+                            <th style="padding:7px 10px;text-align:right;border:1px solid #e2e8f0;color:#475569;">Area</th>
+                            <th style="padding:7px 10px;text-align:right;border:1px solid #e2e8f0;color:#475569;">Spacing</th>
+                            <th style="padding:7px 10px;text-align:right;border:1px solid #e2e8f0;color:#475569;">Est. Real Plants</th>
+                            <th style="padding:7px 10px;text-align:right;border:1px solid #e2e8f0;color:#475569;">Est. Yield (t)</th>
+                        </tr></thead>
+                        <tbody>
+                            ${data.zone_yields.map(z => {
+                                const realCount = ins.real_plant_counts?.[z.crop]?.plant_count;
+                                const spCm = ins.real_plant_counts?.[z.crop]?.spacing_cm;
+                                return `<tr>
+                                    <td style="padding:7px 10px;border:1px solid #e2e8f0;">${getVisual(z.crop.replace(' (border)', '')).emoji} ${z.crop}</td>
+                                    <td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;">${z.acres} ac</td>
+                                    <td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;color:#64748b;">${spCm ? spCm + ' cm' : '—'}</td>
+                                    <td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#7e22ce;">${realCount ? '~' + realCount.toLocaleString() : '—'}</td>
+                                    <td style="padding:7px 10px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#15803d;">${z.yield_t} t</td>
+                                </tr>`;
+                            }).join('')}
+                            <tr style="background:#f0fdf4;font-weight:700;">
+                                <td style="padding:7px 10px;border:1px solid #bbf7d0;">Total Farm Scale</td>
+                                <td style="padding:7px 10px;border:1px solid #bbf7d0;text-align:right;">${data.land_size} ac</td>
+                                <td style="padding:7px 10px;border:1px solid #bbf7d0;text-align:right;">—</td>
+                                <td style="padding:7px 10px;border:1px solid #bbf7d0;text-align:right;color:#7e22ce;">~${ins.total_real_plants ? ins.total_real_plants.toLocaleString() : '—'} Plants</td>
+                                <td style="padding:7px 10px;border:1px solid #bbf7d0;text-align:right;color:#15803d;">${data.insights?.total_yield || '—'} t</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+            }
+
+
+            // Action items
+            if (ins.action_items) {
+                htmlOut += `<div style="background:#fff;padding:14px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:14px;">
                     <h4 style="margin:0 0 8px;color:#475569;">⚡ Agronomic Actions</h4>
-                    <ul style="margin:0;padding-left:18px;color:#334155;font-size:0.94rem;">
-                        ${data.insights.action_items.map(a=>`<li style="margin-bottom:4px;">${a}</li>`).join('')}
+                    <ul style="margin:0;padding-left:18px;color:#334155;font-size:0.92rem;">
+                        ${ins.action_items.map(a => `<li style="margin-bottom:5px;">${a}</li>`).join('')}
                     </ul>
                 </div>`;
             }
+
+            // Warnings
+            if (ins.warnings && ins.warnings.length) {
+                htmlOut += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:14px;">
+                    <h4 style="margin:0 0 6px;color:#b45309;font-size:0.9rem;">⚠️ Warnings</h4>
+                    ${ins.warnings.map(w => `<div style="font-size:0.88rem;color:#92400e;margin-bottom:3px;">${w}</div>`).join('')}
+                </div>`;
+            }
+
+            // Limitations (collapsible)
+            if (data.limitations && data.limitations.length) {
+                htmlOut += `<details style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                    <summary style="background:#f8fafc;padding:10px 14px;cursor:pointer;font-size:0.88rem;font-weight:700;color:#64748b;list-style:none;">
+                        🔍 Known System Limitations (${data.limitations.length}) — click to expand
+                    </summary>
+                    <div style="padding:10px 16px 14px;">
+                        <p style="font-size:0.82rem;color:#94a3b8;margin:0 0 8px;">The following constraints apply to the current rule-based engine:</p>
+                        <ol style="margin:0;padding-left:18px;color:#64748b;font-size:0.85rem;line-height:1.7;">
+                            ${data.limitations.map(l => `<li style="margin-bottom:4px;">${l}</li>`).join('')}
+                        </ol>
+                    </div>
+                </details>`;
+            }
+
             analysisDiv.innerHTML = htmlOut;
+
+            // ── 🧠 Render Memory Panel ─────────────────────────────────
+            const memPanel = document.getElementById('memory-panel');
+            const logSteps = document.getElementById('memory-log-steps');
+            const memWarns = document.getElementById('memory-warnings');
+            const overrideEl = document.getElementById('override-notice');
+            const soilBadge = document.getElementById('soil-impact-badge');
+
+            if (data.memory_used) {
+                memPanel.style.display = 'block';
+
+                // Soil impact badge
+                const si = (data.soil_impact || 'neutral').toLowerCase();
+                soilBadge.textContent = si === 'improves' ? '🌱 Soil Improves'
+                    : si === 'degrades' ? '⚠️ Soil Degrades'
+                        : '⚪ Soil Neutral';
+                soilBadge.style.background = si === 'improves' ? '#dcfce7'
+                    : si === 'degrades' ? '#fef2f2' : '#f1f5f9';
+                soilBadge.style.color = si === 'improves' ? '#15803d'
+                    : si === 'degrades' ? '#b91c1c' : '#64748b';
+
+                // Crop override notice
+                if (data.override_crop) {
+                    overrideEl.style.display = 'block';
+                    overrideEl.innerHTML = `<strong style="color:#b91c1c;">🔄 Crop Override Applied</strong><br>
+                        Your selected crop <strong>${data.requested_crop || '—'}</strong> was changed to
+                        <strong style="color:#15803d;">${data.override_crop}</strong>.<br>
+                        <span style="font-size:0.88rem;color:#7f1d1d;">${data.override_reason || ''}</span>`;
+                } else {
+                    overrideEl.style.display = 'none';
+                }
+
+                // Memory log step timeline
+                const logs = data.memory_log || [];
+                logSteps.innerHTML = logs.map((step, i) => {
+                    const isWarn = step.includes('⚠');
+                    return `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;">
+                        <div style="min-width:26px;height:26px;border-radius:50%;background:${isWarn ? '#fef3c7' : '#ede9fe'};border:2px solid ${isWarn ? '#fbbf24' : '#7c3aed'};display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:${isWarn ? '#92400e' : '#5b21b6'};flex-shrink:0;">${i + 1}</div>
+                        <div style="font-size:0.9rem;color:${isWarn ? '#92400e' : '#374151'};padding-top:3px;line-height:1.5;">${step}</div>
+                    </div>`;
+                }).join('');
+
+                // Memory warnings
+                const warns = data.warnings || [];
+                if (warns.length) {
+                    memWarns.innerHTML = `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;">
+                        <div style="font-weight:700;color:#b45309;margin-bottom:6px;font-size:0.9rem;">⚠️ Decision Warnings</div>
+                        ${warns.map(w => `<div style="font-size:0.88rem;color:#92400e;margin-bottom:4px;padding-left:8px;border-left:3px solid #fbbf24;">${w}</div>`).join('')}
+                    </div>`;
+                } else {
+                    memWarns.innerHTML = `<div style="color:#16a34a;font-size:0.88rem;">✅ No warnings — crop selection is fully optimized for your farm history.</div>`;
+                }
+            } else {
+                memPanel.style.display = 'none';
+            }
         }).catch(err => {
             console.error(err);
             container2D.innerHTML = `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:red;font-weight:bold;">${err.message}</div>`;
@@ -496,7 +877,7 @@
     // 6. Interactive 3D Rotation and Zoom
     const wrapper3D = document.getElementById('isometric-wrapper');
     const floor3D = document.getElementById('isometric-floor');
-    
+
     let isDragging3D = false;
     let currentX = -45; // rotateZ
     let currentY = 60;  // rotateX
@@ -515,7 +896,7 @@
         isDragging3D = true;
         wrapper3D.style.cursor = 'grabbing';
     });
-    
+
     window.addEventListener('mouseup', () => {
         isDragging3D = false;
         wrapper3D.style.cursor = 'grab';
@@ -525,11 +906,11 @@
         if (!isDragging3D) return;
         const deltaX = e.movementX;
         const deltaY = e.movementY;
-        
+
         currentX += deltaX * 0.5;
         currentY -= deltaY * 0.5;
         // Clamp Y (rotateX) between 0 and 85 to prevent floor from flipping over
-        currentY = Math.max(0, Math.min(85, currentY)); 
+        currentY = Math.max(0, Math.min(85, currentY));
         applyTransform();
     });
 

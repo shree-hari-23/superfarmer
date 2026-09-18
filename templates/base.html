@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SuperFarmer — AI-powered agricultural intelligence for Indian farmers. Crop recommendations, disease diagnosis, weather insights and more.">
+    <meta name="description" content="SuperFarmer — AI-powered agricultural intelligence for Indian farmers. Crop recommendations, disease diagnosis, and smart spatial planning.">
     <title>SuperFarmer - AI Agricultural Intelligence</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,9 +24,7 @@
             <a href="{{ url_for('plan') }}">Planner</a>
             <a href="{{ url_for('disease') }}">Disease AI</a>
             <a href="{{ url_for('chat') }}">AI Advisor</a>
-            <a href="{{ url_for('weather') }}">Weather</a>
             <a href="{{ url_for('spatial_planner') }}">Spatial Twin</a>
-            <a href="{{ url_for('yield_comparison') }}">Yield Compare</a>
             <a href="{{ url_for('report') }}">Reports</a>
             <a href="{{ url_for('logout') }}" class="nav-logout">Logout</a>
             {% else %}

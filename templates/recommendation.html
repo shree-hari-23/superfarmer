@@ -1,63 +1,484 @@
 {% extends 'base.html' %}
 {% block content %}
+
+<style>
+  /* ── Recommendation-specific styles ──────────────────────────────────── */
+  .rec-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .rec-header h2 {
+    font-size: 1.9rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #16a34a, #4ade80);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .rec-header p {
+    color: #6b7280;
+    margin-top: .4rem;
+  }
+
+  /* Form grid */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.4rem;
+  }
+
+  /* ── Crop cards ──────────────────────────────────────────────────────── */
+  .crops-section {
+    margin-top: 2.5rem;
+  }
+
+  .crops-section h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #14532d;
+    margin-bottom: 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .crop-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.6rem;
+  }
+
+  .crop-card {
+    background: #fff;
+    border-radius: 18px;
+    border: 1.5px solid #d1fae5;
+    box-shadow: 0 6px 24px rgba(22, 163, 74, .10);
+    overflow: hidden;
+    transition: transform .25s, box-shadow .25s;
+    position: relative;
+  }
+
+  .crop-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 36px rgba(22, 163, 74, .18);
+  }
+
+  /* rank badge */
+  .crop-rank-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: linear-gradient(135deg, #16a34a, #4ade80);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 4px 12px;
+    border-radius: 50px;
+  }
+
+  .crop-rank-badge.rank-1 {
+    background: linear-gradient(135deg, #d97706, #fbbf24);
+  }
+
+  .crop-rank-badge.rank-2 {
+    background: linear-gradient(135deg, #6b7280, #9ca3af);
+  }
+
+  .crop-rank-badge.rank-3 {
+    background: linear-gradient(135deg, #b45309, #d97706);
+  }
+
+  .crop-card-header {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    padding: 1.4rem 1.4rem .8rem;
+    border-bottom: 1px solid #d1fae5;
+  }
+
+  .crop-card-header .crop-emoji {
+    font-size: 2.4rem;
+    line-height: 1;
+  }
+
+  .crop-card-header h4 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #14532d;
+    margin: .35rem 0 .15rem;
+  }
+
+  .crop-card-header .crop-meta {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-top: .4rem;
+  }
+
+  .crop-meta-tag {
+    font-size: .72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 50px;
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+  }
+
+  .crop-meta-tag.water-High {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+  }
+
+  .crop-meta-tag.water-Medium {
+    background: #fef9c3;
+    color: #854d0e;
+    border-color: #fef08a;
+  }
+
+  .crop-meta-tag.water-Low {
+    background: #fce7f3;
+    color: #9d174d;
+    border-color: #fbcfe8;
+  }
+
+  /* Suitability score bar */
+  .score-bar-wrap {
+    padding: 1rem 1.4rem .5rem;
+  }
+
+  .score-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: .78rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: .35rem;
+  }
+
+  .score-bar-bg {
+    background: #e5e7eb;
+    border-radius: 99px;
+    height: 10px;
+    overflow: hidden;
+  }
+
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #16a34a, #4ade80);
+    transition: width 1s ease;
+  }
+
+  /* Card body sections */
+  .crop-card-body {
+    padding: .8rem 1.4rem 1.4rem;
+  }
+
+  .crop-section-title {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #6b7280;
+    margin: 1rem 0 .45rem;
+  }
+
+  .why-box {
+    background: #f0fdf4;
+    border-left: 3px solid #16a34a;
+    border-radius: 0 8px 8px 0;
+    padding: .65rem .9rem;
+    font-size: .86rem;
+    line-height: 1.5;
+    color: #1f2937;
+  }
+
+  .features-list,
+  .tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+  }
+
+  .features-list li,
+  .tips-list li {
+    font-size: .84rem;
+    color: #374151;
+    display: flex;
+    gap: .4rem;
+    align-items: flex-start;
+  }
+
+  .features-list li::before {
+    content: "✦";
+    color: #16a34a;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .tips-list li::before {
+    content: "💡";
+    flex-shrink: 0;
+  }
+
+  .nutrition-text {
+    font-size: .84rem;
+    color: #374151;
+    line-height: 1.5;
+    background: #fffbeb;
+    border-radius: 8px;
+    padding: .55rem .8rem;
+    border: 1px solid #fef3c7;
+  }
+
+  .crop-info-row {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+    margin-top: .8rem;
+  }
+
+  .crop-info-chip {
+    font-size: .75rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: .3rem .7rem;
+    color: #374151;
+  }
+
+  .crop-info-chip strong {
+    color: #111827;
+  }
+
+  /* Plan CTA */
+  .plan-cta {
+    margin-top: 1.2rem;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-plan {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: .55rem 1.3rem;
+    font-size: .86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity .2s, transform .2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+  }
+
+  .btn-plan:hover {
+    opacity: .9;
+    transform: translateY(-1px);
+  }
+
+  /* Ollama badge */
+  .llm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #6d28d9;
+    background: #ede9fe;
+    border: 1px solid #c4b5fd;
+    border-radius: 50px;
+    padding: 3px 12px;
+    margin-bottom: 1.2rem;
+  }
+</style>
+
 <div class="card">
+  <div class="rec-header">
     <h2>🌾 Step 2: Crop Recommendation</h2>
-    <p>Provide current soil and climatic parameters. Our Recommendation Agent will analyze and suggest the best crops.
-    </p>
+    <p>Enter your soil &amp; climate parameters — the llm mode will generate the best crops, and our local AI will
+      explain why.</p>
+  </div>
 
-    <form method="POST">
-        <div class="form-group">
-            <label for="soil_type">Soil Type</label>
-            <select id="soil_type" name="soil_type">
-                <option value="Black">Black Soil</option>
-                <option value="Red">Red Soil</option>
-                <option value="Alluvial">Alluvial</option>
-                <option value="Laterite">Laterite</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="water_const">Water Constraint</label>
-            <select id="water_const" name="water_const">
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="n">Nitrogen (N) mg/kg</label>
-            <input type="number" id="n" name="n" value="45" required>
-        </div>
-        <div class="form-group">
-            <label for="p">Phosphorus (P) mg/kg</label>
-            <input type="number" id="p" name="p" value="25" required>
-        </div>
-        <div class="form-group">
-            <label for="k">Potassium (K) mg/kg</label>
-            <input type="number" id="k" name="k" value="80" required>
-        </div>
-        <div class="form-group">
-            <label for="temp">Temperature (°C)</label>
-            <input type="number" id="temp" name="temp" value="28" required>
-        </div>
-        <div class="form-group">
-            <label for="rain">Avg Rainfall (mm)</label>
-            <input type="number" id="rain" name="rain" value="100" required>
-        </div>
-        <div class="form-group full-width">
-            <button type="submit" class="btn">Get Recommendation</button>
-        </div>
-    </form>
-
-    {% if recommendations %}
-    <div class="result-box">
-        <h3>Recommended Crops:</h3>
-        <p style="font-size: 1.2rem; font-weight: bold; color: var(--primary);">{{ recommendations }}</p>
-
-        <form action="{{ url_for('plan') }}" method="POST" style="margin-top: 20px; display: block;">
-            <input type="hidden" name="crop_name" value="{{ recommendations.split(',')[0] }}">
-            <button type="submit" class="btn btn-secondary">Generate Plan for 1st Option</button>
-        </form>
+  <form method="POST">
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="soil_type">Soil Type</label>
+        <select id="soil_type" name="soil_type">
+          <option value="Black">Black Soil</option>
+          <option value="Red">Red Soil</option>
+          <option value="Alluvial">Alluvial</option>
+          <option value="Laterite">Laterite</option>
+          <option value="Sandy">Sandy</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="water_const">Water Constraint</label>
+        <select id="water_const" name="water_const">
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="n">Nitrogen (N) mg/kg</label>
+        <input type="number" id="n" name="n" value="45" required>
+      </div>
+      <div class="form-group">
+        <label for="p">Phosphorus (P) mg/kg</label>
+        <input type="number" id="p" name="p" value="25" required>
+      </div>
+      <div class="form-group">
+        <label for="k">Potassium (K) mg/kg</label>
+        <input type="number" id="k" name="k" value="80" required>
+      </div>
+      <div class="form-group">
+        <label for="temp">Temperature (°C)</label>
+        <input type="number" id="temp" name="temp" value="28" required>
+      </div>
+      <div class="form-group">
+        <label for="rain">Avg Rainfall (mm)</label>
+        <input type="number" id="rain" name="rain" value="100" required>
+      </div>
     </div>
-    {% endif %}
+    <small style="display:block; margin-bottom: 12px; color: #6b7280;">
+      💡 N/P/K values auto-fill based on soil type. Modify only if you have a recent soil lab test.
+    </small>
+    <button type="submit" class="btn" id="rec-submit-btn">🔍 Get Recommendation</button>
+  </form>
+
+  <!-- ── Results Section ─────────────────────────────────────────────────── -->
+  {% if recommendations and recommendations.crops_str %}
+  <div class="crops-section">
+    <h3>🌱 AI-Recommended Crops</h3>
+
+    <div class="llm-badge">
+      🤖 Ollama qwen2.5:7b — local LLM analysis
+    </div>
+
+    <div class="crop-cards-grid">
+      {% for detail in recommendations.crop_details %}
+      <div class="crop-card" id="crop-card-{{ loop.index }}">
+
+        <!-- Rank badge -->
+        <span class="crop-rank-badge rank-{{ detail.rank }}">#{{ detail.rank }} Pick</span>
+
+        <!-- Header -->
+        <div class="crop-card-header">
+          <div class="crop-emoji">{{ detail.emoji }}</div>
+          <h4>{{ detail.crop }}</h4>
+          <div class="crop-meta">
+            <span class="crop-meta-tag water-{{ detail.water_need }}">💧 {{ detail.water_need }} Water</span>
+            <span class="crop-meta-tag">📅 {{ detail.ideal_season }}</span>
+            <span class="crop-meta-tag">📦 {{ detail.expected_yield }}</span>
+          </div>
+        </div>
+
+        <!-- Suitability Score Bar -->
+        <div class="score-bar-wrap">
+          <div class="score-bar-label">
+            <span>Suitability Score</span>
+            <span style="color:#16a34a; font-weight:800;">{{ detail.suitability_score }}%</span>
+          </div>
+          <div class="score-bar-bg">
+            <div class="score-bar-fill" style="width: {{ detail.suitability_score }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="crop-card-body">
+
+          <!-- Why recommended -->
+          <div class="crop-section-title">🎯 Why This Crop?</div>
+          <div class="why-box">{{ detail.why_recommended }}</div>
+
+          <!-- Key Features -->
+          <div class="crop-section-title">⚡ Key Features</div>
+          <ul class="features-list">
+            {% for feat in detail.key_features %}
+            <li>{{ feat }}</li>
+            {% endfor %}
+          </ul>
+
+          <!-- Nutritional Importance -->
+          <div class="crop-section-title">🌿 Importance</div>
+          <div class="nutrition-text">{{ detail.nutritional_importance }}</div>
+
+          <!-- Growing Tips -->
+          <div class="crop-section-title">📋 Growing Tips</div>
+          <ul class="tips-list">
+            {% for tip in detail.growing_tips %}
+            <li>{{ tip }}</li>
+            {% endfor %}
+          </ul>
+
+          <!-- Plan CTA -->
+          <div class="plan-cta">
+            <form action="{{ url_for('plan') }}" method="POST">
+              <input type="hidden" name="crop_name" value="{{ detail.crop }}">
+              <button type="submit" class="btn-plan">
+                📋 Generate Plan for {{ detail.crop }} →
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<script>
+  /* Auto-fill NPK defaults on soil change */
+  const soilDefaults = {
+    "Black": { n: 40, p: 20, k: 80 },
+    "Red": { n: 25, p: 15, k: 45 },
+    "Alluvial": { n: 50, p: 30, k: 60 },
+    "Laterite": { n: 25, p: 15, k: 45 },
+    "Sandy": { n: 15, p: 10, k: 35 }
+  };
+
+  document.getElementById('soil_type').addEventListener('change', function () {
+    const d = soilDefaults[this.value];
+    if (d) {
+      document.getElementById('n').value = d.n;
+      document.getElementById('p').value = d.p;
+      document.getElementById('k').value = d.k;
+    }
+  });
+
+  /* Animate score bars on load */
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.score-bar-fill').forEach(bar => {
+      const target = bar.style.width;
+      bar.style.width = '0%';
+      requestAnimationFrame(() => {
+        setTimeout(() => { bar.style.width = target; }, 80);
+      });
+    });
+  });
+
+  /* Show loading state on form submit */
+  const form = document.querySelector('form');
+  const btn = document.getElementById('rec-submit-btn');
+  if (form && btn) {
+    form.addEventListener('submit', () => {
+      btn.textContent = '⏳ Analysing with AI...';
+      btn.disabled = true;
+    });
+  }
+</script>
+
 {% endblock %}

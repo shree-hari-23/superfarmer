@@ -1,16 +1,192 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="card">
-    <h2>📄 Final Report</h2>
-    <p>The Report Agent has consolidated your session into a final structured advisory.</p>
+<div id="report-root" style="max-width: 800px; margin: 0 auto; padding-top: 1rem;">
 
-    <div style="background: #fff; padding: 2rem; border-radius: 8px; border: 1px solid #e0e0e0; margin-top: 2rem;">
-        <pre>{{ report }}</pre>
+    <!-- LOADING STATE -->
+    <div id="loading-state" style="text-align: center; padding: 5rem 0;">
+        <div style="font-size: 3rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">📋</div>
+        <h3 style="color: #475569; font-weight: 700;">Synthesizing Multi-Agent Field Report...</h3>
+        <p style="color: #94a3b8; max-width: 460px; margin: 0.5rem auto 0; line-height: 1.6; font-size: 0.92rem;">
+            Collecting and compressing key information from Intake, Soil, Recommendation, Plan, Spatial Layout, Weather, and Yield agents...
+        </p>
     </div>
 
-    <div style="margin-top: 2rem; text-align: right;">
-        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print / Save as PDF</button>
-        <a href="{{ url_for('home') }}" class="btn">Start New Session</a>
+    <!-- ERROR STATE -->
+    <div id="error-state" style="display: none; padding: 1.25rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 8px; color: #b91c1c; font-weight: 600; margin-bottom: 1.5rem;"></div>
+
+    <!-- CONCISE REPORT CONTENT -->
+    <div id="report-content" style="display: none;">
+
+        <!-- Header Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;" class="no-print">
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 800; color: #0f172a; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🌱</span> Field Advisory Report
+                </h1>
+                <p style="color: #64748b; font-size: 0.88rem; margin: 0;">
+                    Prepared for <strong id="hdr-name" style="color: #1e293b;">—</strong> &nbsp;•&nbsp; <span id="hdr-date">—</span> &nbsp;•&nbsp; Report #<span id="hdr-num">1</span>
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.6rem;">
+                <button id="copyBtn" onclick="copyReport()" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; padding: 0.55rem 1.1rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; transition: all 0.2s;">
+                    <span>📋</span> Copy Report
+                </button>
+                <button onclick="window.print()" style="background: #16a34a; color: #ffffff; border: none; padding: 0.55rem 1.2rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
+                    <span>🖨️</span> Print / PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- 5-6 Line Concise Summary Card -->
+        <div style="background: #ffffff; border: 1.5px solid #bbf7d0; border-radius: 16px; padding: 1.75rem 2rem; box-shadow: 0 10px 30px rgba(22, 163, 74, 0.08); margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5px solid #f1f5f9; padding-bottom: 0.9rem; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #16a34a;">
+                    Multi-Agent Synthesis • Key Information
+                </div>
+                <span style="background: #dcfce7; color: #15803d; font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px solid #86efac;">
+                    5–6 Line Summary
+                </span>
+            </div>
+
+            <!-- List of the 5-6 lines -->
+            <div id="summary-lines-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                <!-- Populated dynamically with exactly the 5-6 lines -->
+            </div>
+        </div>
+
+        <!-- Footer / Return Links -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 1.25rem; font-size: 0.85rem; color: #64748b;" class="no-print">
+            <div>
+                🌾 SuperFarmer AI Field Intelligence
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <a href="{{ url_for('recommendation') }}" style="color: #16a34a; text-decoration: none; font-weight: 600;">← Back to Dashboard</a>
+                <a href="{{ url_for('spatial_planner') }}" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Spatial Twin →</a>
+            </div>
+        </div>
     </div>
 </div>
+
+<style>
+    @keyframes pulse { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:.75} 100%{transform:scale(1);opacity:1} }
+    .report-line-item {
+        display: flex;
+        gap: 0.9rem;
+        align-items: flex-start;
+        padding: 0.85rem 1rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        line-height: 1.6;
+        font-size: 0.93rem;
+        color: #1e293b;
+    }
+    .report-line-icon {
+        font-size: 1.3rem;
+        line-height: 1.2;
+        flex-shrink: 0;
+    }
+    .report-line-label {
+        color: #15803d;
+        font-weight: 800;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-right: 0.4rem;
+        display: inline-block;
+    }
+    @media print {
+        .navbar, .no-print { display: none !important; }
+        #report-root { max-width: 100% !important; padding: 0 !important; }
+        .report-line-item { background: #ffffff !important; border: 1px solid #cbd5e1 !important; }
+    }
+</style>
+
+<script>
+let fullReportText = "";
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetch('/generate-report', { method: 'POST' })
+        .then(async r => {
+            if (!r.ok) { const t = await r.text(); throw new Error(t); }
+            return r.json();
+        })
+        .then(d => {
+            if (d.error) throw new Error(d.error);
+
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('report-content').style.display = 'block';
+
+            // Meta
+            document.getElementById('hdr-name').textContent = d.farmer_name || 'Farmer';
+            document.getElementById('hdr-date').textContent = d.generated_at || new Date().toLocaleDateString();
+            document.getElementById('hdr-num').textContent = d.report_number || '1';
+
+            const listC = document.getElementById('summary-lines-list');
+            listC.innerHTML = '';
+
+            const lines = d.lines || d.summary_lines || [];
+            fullReportText = d.report || (Array.isArray(lines) ? lines.join('\n') : "");
+
+            const domainBadges = [
+                { icon: '🏡', label: 'Farmer & Farm Details' },
+                { icon: '🌾', label: 'Crop Recommendation' },
+                { icon: '📋', label: 'Crop Plan' },
+                { icon: '🗺️', label: 'Spatial Farming Layout' },
+                { icon: '🌦️', label: 'Weather & Risk' },
+                { icon: '📈', label: 'Yield & Profit Insights' }
+            ];
+
+            if (Array.isArray(lines) && lines.length > 0) {
+                lines.forEach((line, idx) => {
+                    const badge = domainBadges[idx] || { icon: '🔹', label: `Insight ${idx + 1}` };
+                    const cleanText = line.replace(/^[A-Za-z\s&]+:\s*/, '');
+                    const item = document.createElement('div');
+                    item.className = 'report-line-item';
+                    item.innerHTML = `
+                        <span class="report-line-icon">${badge.icon}</span>
+                        <div>
+                            <span class="report-line-label">${badge.label}:</span>
+                            <span>${cleanText}</span>
+                        </div>
+                    `;
+                    listC.appendChild(item);
+                });
+            } else if (fullReportText) {
+                const splitLines = fullReportText.split('\n').filter(l => l.trim());
+                splitLines.forEach((line, idx) => {
+                    const badge = domainBadges[idx] || { icon: '🔹', label: `Insight ${idx + 1}` };
+                    const cleanText = line.replace(/^[A-Za-z\s&]+:\s*/, '');
+                    const item = document.createElement('div');
+                    item.className = 'report-line-item';
+                    item.innerHTML = `
+                        <span class="report-line-icon">${badge.icon}</span>
+                        <div>
+                            <span class="report-line-label">${badge.label}:</span>
+                            <span>${cleanText}</span>
+                        </div>
+                    `;
+                    listC.appendChild(item);
+                });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('loading-state').style.display = 'none';
+            const es = document.getElementById('error-state');
+            es.style.display = 'block';
+            es.textContent = `Error generating report: ${err.message}`;
+        });
+});
+
+function copyReport() {
+    if (!fullReportText) return;
+    navigator.clipboard.writeText(fullReportText).then(() => {
+        const btn = document.getElementById('copyBtn');
+        const oldHtml = btn.innerHTML;
+        btn.innerHTML = '<span>✅</span> Copied!';
+        setTimeout(() => { btn.innerHTML = oldHtml; }, 2000);
+    });
+}
+</script>
 {% endblock %}

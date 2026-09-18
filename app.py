@@ -33,9 +33,7 @@ _ROUTE_MAP = {
     'plan':             '/plan',
     'disease':          '/disease',
     'chat':             '/chat',
-    'weather':          '/weather',
     'spatial_planner':  '/spatial-planner',
-    'yield_comparison': '/yield-comparison',
     'report':           '/report',
     'static':           '/static',
 }
@@ -59,12 +57,14 @@ def send_async_email(email_data):
 
 
 def _render(request: Request, template: str, **ctx):
-    """Shortcut: renders a Jinja2 template and passes session + extra ctx.
-    Starlette 1.x signature: TemplateResponse(request, name, context={...})
-    The 'request' key is NOT placed inside context — it is the first positional arg.
-    """
+    """Shortcut: renders a Jinja2 template and passes session + extra ctx."""
     ctx.setdefault('session', request.session)
-    return templates.TemplateResponse(request, template, ctx)
+    ctx['request'] = request
+    try:
+        return templates.TemplateResponse(template, ctx)
+    except TypeError:
+        return templates.TemplateResponse(name=template, context=ctx, request=request)
+
 
 
 def _redirect(route_name: str):
@@ -101,24 +101,21 @@ def signup_post(
     if res.get('success'):
         request.session['user_id'] = res['user_id']
 
-        welcome_html = f"""
-        <html>
-        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #2e7d32; margin: 0;">🌱 Welcome to SuperFarmer!</h1>
-                </div>
-                <p style="font-size: 16px; line-height: 1.6;">Hello,</p>
-                <p style="font-size: 16px; line-height: 1.6;">Thank you for joining <strong>SuperFarmer</strong>. We are thrilled to have you on board.</p>
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="#" style="background-color: #2e7d32; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Explore Your Dashboard</a>
-                </div>
-                <hr style="border: 0; height: 1px; background-color: #e0e0e0; margin: 30px 0;">
-                <p style="font-size: 12px; color: #777; text-align: center;">© 2026 SuperFarmer. All rights reserved.</p>
-            </div>
-        </body>
-        </html>
-        """
+        welcome_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222222; line-height: 1.6; margin: 20px;">
+    <h2 style="color: #2E7D32;">Welcome to SuperFarmer!</h2>
+    <p>Hello,</p>
+    <p>Thank you for registering with <b>SuperFarmer</b>. Your account has been created successfully.</p>
+    <p>You can now log in to explore personalized crop recommendations, real-time weather alerts, disease diagnosis, and spatial farm planning.</p>
+    <br>
+    <p>Best regards,<br>
+    <strong>The SuperFarmer Team</strong></p>
+</body>
+</html>"""
         threading.Thread(target=send_async_email, args=({
             'to_email': email,
             'subject': 'Welcome to SuperFarmer!',
@@ -149,24 +146,21 @@ def login_post(
     if res.get('success'):
         request.session['user_id'] = res['user_id']
 
-        login_html = f"""
-        <html>
-        <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="color: #1976d2; margin: 0;">🛡️ New Login Alert</h1>
-                </div>
-                <p style="font-size: 16px; line-height: 1.6;">Hello,</p>
-                <p style="font-size: 16px; line-height: 1.6;">We noticed a new login to your <strong>SuperFarmer</strong> account.</p>
-                <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 5px; padding: 15px; margin: 25px 0;">
-                    <p style="margin: 0; font-size: 14px;"><strong>Note:</strong> If you did not authorize this login, please change your password immediately.</p>
-                </div>
-                <hr style="border: 0; height: 1px; background-color: #e0e0e0; margin: 30px 0;">
-                <p style="font-size: 12px; color: #777; text-align: center;">© 2026 SuperFarmer. Account Security Team.</p>
-            </div>
-        </body>
-        </html>
-        """
+        login_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #222222; line-height: 1.6; margin: 20px;">
+    <h2 style="color: #1976D2;">Security Alert: New Login to SuperFarmer</h2>
+    <p>Hello,</p>
+    <p>We detected a new login to your <b>SuperFarmer</b> account (<code>{email}</code>).</p>
+    <p><b>Note:</b> If you did not perform this login, please update your account password immediately to secure your profile.</p>
+    <br>
+    <p>Best regards,<br>
+    <strong>SuperFarmer Security Team</strong></p>
+</body>
+</html>"""
         threading.Thread(target=send_async_email, args=({
             'to_email': email,
             'subject': 'New Login Alert - SuperFarmer',
@@ -235,7 +229,13 @@ def recommendation_get(request: Request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
         return _redirect('intake')
-    return _render(request, 'recommendation.html', recommendations=request.session.get('last_rec'))
+        
+    last_rec = request.session.get('last_rec')
+    # Only pass recommendations through if it's a proper result dict (has crops_str key)
+    if isinstance(last_rec, dict) and 'crops_str' not in last_rec:
+        last_rec = None
+
+    return _render(request, 'recommendation.html', recommendations=last_rec)
 
 
 @app.post('/recommendation', response_class=HTMLResponse)
@@ -262,9 +262,12 @@ def recommendation_post(
         'water_const': water_const
     }
     rec = orchestrator.route_request('recommendation', data)
-    request.session['last_rec'] = rec
+    # rec is now a dict: {crops_str, crops, crop_details}
+    # Starlette sessions can't serialise custom objects, so convert to plain dict
+    rec_plain = dict(rec) if isinstance(rec, dict) else {"crops_str": str(rec), "crops": [], "crop_details": []}
+    request.session['last_rec'] = rec_plain
     request.session['soil_data'] = data
-    return _render(request, 'recommendation.html', recommendations=rec)
+    return _render(request, 'recommendation.html', recommendations=rec_plain)
 
 
 # ── Plan ─────────────────────────────────────────────────────────────────────
@@ -355,30 +358,6 @@ async def chat_post(request: Request):
     return JSONResponse({'reply': reply})
 
 
-# ── Weather ──────────────────────────────────────────────────────────────────
-
-@app.get('/weather', response_class=HTMLResponse)
-def weather_get(request: Request):
-    if not _logged_in(request):
-        return _redirect('login')
-    if not request.session.get('farmer_id'):
-        return _redirect('home')
-    return _render(request, 'weather.html')
-
-
-@app.post('/weather', response_class=HTMLResponse)
-def weather_post(
-    request: Request,
-    location: str = Form(...)
-):
-    if not _logged_in(request):
-        return _redirect('login')
-    if not request.session.get('farmer_id'):
-        return _redirect('home')
-
-    weather_analysis = orchestrator.route_request('weather', {'location': location})
-    return _render(request, 'weather.html', analysis=weather_analysis)
-
 
 # ── Spatial Planner ──────────────────────────────────────────────────────────
 
@@ -409,44 +388,40 @@ async def spatial_planner_post(request: Request):
     return JSONResponse(layout_data)
 
 
-# ── Yield Comparison ─────────────────────────────────────────────────────────
-
-@app.get('/yield-comparison', response_class=HTMLResponse)
-def yield_comparison_get(request: Request):
-    if not _logged_in(request):
-        return _redirect('login')
-    return _render(request, 'yield_comparison.html')
-
-
-@app.post('/yield-comparison', response_class=HTMLResponse)
-def yield_comparison_post(
-    request: Request,
-    land_size: float = Form(...),
-    main_crop: str = Form(...),
-    companion_crop: str = Form(default='None')
-):
-    if not _logged_in(request):
-        return _redirect('login')
-    result = orchestrator.route_request('yield_comparison', {
-        'land_size': land_size,
-        'main_crop': main_crop,
-        'companion_crop': companion_crop
-    })
-    return _render(request, 'yield_comparison.html', result=result,
-                   land_size=land_size, main_crop=main_crop, companion_crop=companion_crop)
-
 
 # ── Report ───────────────────────────────────────────────────────────────────
 
 @app.get('/report', response_class=HTMLResponse)
-def report_get(request: Request):
+def report_get(request: Request, format: str = None):
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
         return _redirect('home')
+    if format == 'json' or request.headers.get('accept') == 'application/json':
+        report_data = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
+        return JSONResponse(report_data)
+    return _render(request, 'report.html')
 
-    report_text = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
-    return _render(request, 'report.html', report=report_text)
+@app.post('/report')
+async def report_post(request: Request):
+    if not _logged_in(request):
+        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
+    if not request.session.get('farmer_id'):
+        return JSONResponse({'error': 'No farmer profile'}, status_code=400)
+
+    report_data = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
+    return JSONResponse(report_data)
+
+@app.post('/generate-report')
+async def generate_report_post(request: Request):
+    if not _logged_in(request):
+        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
+    if not request.session.get('farmer_id'):
+        return JSONResponse({'error': 'No farmer profile'}, status_code=400)
+
+    report_data = orchestrator.route_request('report', {'farmer_id': request.session['farmer_id']})
+    return JSONResponse(report_data)
+
 
 
 # ── Entry Point ──────────────────────────────────────────────────────────────

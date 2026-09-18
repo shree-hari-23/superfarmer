@@ -9,10 +9,40 @@ from email.mime.multipart import MIMEMultipart
 import google.generativeai as genai
 import PIL.Image
 from openai import OpenAI
+import builtins
 
-# ── Primary LLM: Groq llama-3.1-8b-instant ───────────────────────────────────
+# Safe print to prevent Windows terminal crashes when logging emojis/unicode
+_original_print = builtins.print
+def safe_print(*args, **kwargs):
+    try:
+        _original_print(*args, **kwargs)
+    except UnicodeEncodeError:
+        new_args = [str(a).encode('ascii', 'replace').decode('ascii') for a in args]
+        _original_print(*new_args, **kwargs)
+builtins.print = safe_print
+
+# ── Primary LLM: GLM (Zhipu AI glm-4-flash) ───────────────────────────────────
+def _call_glm(system_prompt: str, user_message: str, history: list = None, model: str = "glm-4-flash") -> str:
+    """Primary LLM: Zhipu AI GLM (glm-4-flash / glm-4-plus)."""
+    api_key = os.environ.get("GLM_API_KEY")
+    if not api_key:
+        raise ValueError("GLM_API_KEY missing from .env")
+    client = OpenAI(api_key=api_key, base_url="https://open.bigmodel.cn/api/paas/v4")
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        for m in history:
+            role = "user" if m.get("role") == "user" else "assistant"
+            messages.append({"role": role, "content": m.get("content", "")})
+    messages.append({"role": "user", "content": user_message})
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+    )
+    return response.choices[0].message.content
+
+# ── Secondary LLM: Groq llama-3.1-8b-instant ──────────────────────────────────
 def _call_groq(system_prompt: str, user_message: str, history: list = None) -> str:
-    """Primary LLM: Groq llama-3.1-8b-instant."""
+    """Secondary LLM: Groq llama-3.1-8b-instant."""
     api_key = os.environ.get("GROK_API_KEY")
     if not api_key:
         raise ValueError("GROK_API_KEY missing from .env")
@@ -54,10 +84,22 @@ def _call_claude(system_prompt: str, user_message: str, history: list = None) ->
     )
     return response.content[0].text
 
-# ── Unified call: Groq primary → Claude fallback ──────────────────────────────
+# ── Unified call: GLM primary → Groq secondary → Claude fallback ─────────────
 def _call_llm(system_prompt: str, user_message: str, history: list = None,
               label: str = "LLM") -> str:
-    """Call Groq first; fall back to Claude on any error."""
+    """Call GLM first, fallback to Groq, then Claude."""
+    # 1. Try GLM-4-Flash
+    if os.environ.get("GLM_API_KEY"):
+        try:
+            print(f"   🤖 [{label}] Model : zhipuai/glm-4-flash")
+            t0 = time.time()
+            result = _call_glm(system_prompt, user_message, history)
+            print(f"   ✅ [{label}] Response in {round(time.time()-t0,2)}s")
+            return result
+        except Exception as e_glm:
+            print(f"   ⚠️  [{label}] GLM failed: {e_glm}, falling back to Groq...")
+
+    # 2. Fallback to Groq LLaMA 3.1
     try:
         print(f"   🤖 [{label}] Model : groq/llama-3.1-8b-instant")
         t0 = time.time()
@@ -73,11 +115,12 @@ def _call_llm(system_prompt: str, user_message: str, history: list = None,
             print(f"   ✅ [{label}] Claude response in {round(time.time()-t0,2)}s")
             return result
         except Exception as e_claude:
-            return f"Both primary (Groq) and fallback (Claude) failed.\nGroq: {e_groq}\nClaude: {e_claude}"
+            return f"All models (GLM, Groq, Claude) failed.\nGroq: {e_groq}\nClaude: {e_claude}"
 
-# Keep _call_gemini as a thin alias so existing non-critical callers don't break
+# Keep _call_gemini as a thin alias so existing callers don't break
 def _call_gemini(system_prompt: str, user_message: str, history: list = None) -> str:
     return _call_llm(system_prompt, user_message, history, label="LLM")
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -202,6 +245,28 @@ class EmailAgent:
             return False
 
 from werkzeug.security import generate_password_hash, check_password_hash
+try:
+    import bcrypt
+except ImportError:
+    bcrypt = None
+
+def _verify_password(stored_hash: str, password: str) -> bool:
+    if not stored_hash:
+        return False
+    # Check bcrypt hashes ($2a$, $2b$, $2y$)
+    if stored_hash.startswith(('$2a$', '$2b$', '$2y$', '$2x$')) and bcrypt:
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8'))
+        except Exception:
+            pass
+    # Check werkzeug hashes (scrypt, pbkdf2)
+    try:
+        if check_password_hash(stored_hash, password):
+            return True
+    except (ValueError, Exception):
+        pass
+    # Fallback to plain text comparison if legacy unhashed
+    return stored_hash == password
 
 class UserAuthAgent:
     @staticmethod
@@ -228,9 +293,10 @@ class UserAuthAgent:
         res = execute_fluxbase_sql(query)
         if res.get('rows'):
             user_record = res['rows'][0]
-            if check_password_hash(user_record['password_hash'], password):
+            if _verify_password(user_record.get('password_hash', ''), password):
                 return {"success": True, "user_id": user_record['user_id']}
         return {"success": False, "error": "Invalid email or password."}
+
 
     @staticmethod
     def get_farmer_profile_by_user(user_id):
@@ -267,82 +333,239 @@ class IntakeAgent:
         return farmer_id
 
 class CropRecommendationAgent:
+    # Emoji map for common crops
+    _CROP_EMOJI = {
+        'rice': '🌾', 'wheat': '🌾', 'corn': '🌽', 'maize': '🌽',
+        'sugarcane': '🎋', 'cotton': '🪴', 'soybean': '🫘', 'tomato': '🍅',
+        'onion': '🧅', 'garlic': '🧄', 'potato': '🥔', 'sunflower': '🌻',
+        'mustard': '🌿', 'chickpea': '🫘', 'groundnut': '🥜', 'marigold': '🌼',
+        'sorghum': '🌾', 'millet': '🌾', 'pearl millet': '🌾',
+        'finger millet': '🌾', 'lentil': '🌿', 'pigeon peas': '🌿',
+        'moth beans': '🌱', 'sesame': '🌱', 'watermelon': '🍉',
+    }
+
     @staticmethod
     def recommend(farmer_id, soil_type, n, p, k, temp, rain, water_const):
         print("\n" + "━" * 60)
         print("🌾 [CropRecommendation] Analysing soil parameters")
         print(f"   Soil     : {soil_type} | Water: {water_const}")
         print(f"   NPK      : N={n} P={p} K={k} | Temp={temp}°C | Rain={rain}mm")
+        print(f"   🤖 Engine  : Ollama qwen2.5:7b (AI-only)")
         print("━" * 60)
 
-        rec_str = None
-        prompt = f"Analyze these soil parameters for Indian farming: N:{n}, P:{p}, K:{k}, Temp:{temp}C, Rain:{rain}mm, Soil:{soil_type}, Water:{water_const}. Recommend the top 3 most suitable crops. Return ONLY the crop names, comma-separated."
+        crop_details = CropRecommendationAgent._ollama_recommend_and_explain(
+            soil_type, n, p, k, temp, rain, water_const
+        )
 
-        try:
-            from dotenv import dotenv_values
-            env_vars = dotenv_values(".env")
-            api_key = env_vars.get("GROK_API_KEY") or os.environ.get("GROK_API_KEY")
-            if api_key:
-                print("   🤖 Model    : groq/llama-3.1-8b-instant")
-                t0 = time.time()
-                client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-                response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                rec_str = response.choices[0].message.content.strip().replace("'", "\'")
-                print(f"   ✅ Response  : received in {round(time.time()-t0,2)}s → {rec_str}")
-            else:
-                print("   ❌ GROK_API_KEY missing")
-        except Exception as e:
-            print(f"   ⚠️  Groq inference error: {e}")
+        top3    = [d["crop"] for d in crop_details]
+        rec_str = ", ".join(top3)
 
-        # Fallback: rule-based deterministic logic
-        if not rec_str:
-            rec_str = CropRecommendationAgent._fallback_recommend(soil_type, n, p, k, temp, rain, water_const)
-            print(f"   🔄 Fallback  : rule-based → {rec_str}")
-
+        print(f"   ✅ Recommended : {rec_str}")
         print("━" * 60 + "\n")
+
         query = f"INSERT INTO crop_recommendations (farmer_id, recommended_crops) VALUES ({int(farmer_id)}, '{safe_str(rec_str)}');"
         execute_fluxbase_sql(query)
-        return rec_str
 
+        return {
+            "crops_str": rec_str,
+            "crops": top3,
+            "crop_details": crop_details,
+        }
+
+    # ── Ollama: recommend + explain in one shot ────────────────────────────
     @staticmethod
-    def _fallback_recommend(soil_type, n, p, k, temp, rain, water_const):
-        import random
-        # Fallback recommendations if API fails
-        recommendations = []
-        soil = soil_type.lower()
+    def _ollama_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const):
+        """
+        Ask Ollama qwen2.5:7b to choose the top-3 crops AND return full
+        agronomic explanations for each, based purely on soil/climate data.
+        Returns a list of 3 dicts.
+        """
+        prompt = f"""You are an expert Indian agronomist AI.
+
+Analyse the farmer's soil and climate data below and recommend the TOP 3 most suitable crops for Indian farming conditions.
+
+ALLOWED CROPS (You MUST ONLY pick from this list. Do NOT generate any crop outside this list):
+- Cereals: Corn, Maize, Wheat, Rice
+- Vegetables: Tomato, Potato, Onion, Garlic
+- Cash Crops: Sugarcane, Cotton, Sunflower, Mustard
+- Legumes: Soybean, Groundnut, Chickpea
+- Companion Crop: Marigold
+
+FARMER DATA:
+- Soil Type     : {soil_type}
+- Nitrogen (N)  : {n} mg/kg
+- Phosphorus (P): {p} mg/kg
+- Potassium (K) : {k} mg/kg
+- Temperature   : {temp}°C
+- Avg Rainfall  : {rain} mm
+- Water Supply  : {water_const}
+
+Return EXACTLY a JSON array of 3 objects (no more, no less) in this format:
+[
+  {{
+    "crop": "<Crop Name from ALLOWED CROPS — title case>",
+    "rank": 1,
+    "suitability_score": <integer 70-99>,
+    "why_recommended": "<2-3 sentences explaining why this crop is ideal for the above soil/climate data.>",
+    "key_features": [
+      "<Feature 1 — specific to this crop and the data above>",
+      "<Feature 2>",
+      "<Feature 3>"
+    ],
+    "nutritional_importance": "<1-2 sentences on economic or nutritional value for Indian farmers.>",
+    "growing_tips": [
+      "<Practical tip 1>",
+      "<Practical tip 2>",
+      "<Practical tip 3>"
+    ],
+    "ideal_season": "<e.g. Kharif (June-Oct)>",
+    "expected_yield": "<e.g. 2-3 tonnes/acre>",
+    "water_need": "<Low | Medium | High>"
+  }},
+  {{ ... rank 2 ... }},
+  {{ ... rank 3 ... }}
+]
+
+Rules:
+- Recommend crops ONLY from the ALLOWED CROPS list.
+- Base crop choice entirely on the soil/climate data provided.
+- suitability_score must reflect rank order (rank 1 highest).
+- Return ONLY valid JSON. No markdown fences, no extra text.
+""".strip()
+
+        try:
+            import ollama as _ollama
+            import json
+            print("   🤖 [Ollama] Calling qwen2.5:7b for recommendations...")
+            t0 = time.time()
+            resp = _ollama.chat(
+                model="qwen2.5:7b",
+                messages=[{"role": "user", "content": prompt}],
+                options={"temperature": 0.2, "num_predict": 2500}
+            )
+            raw = resp.message.content.strip()
+
+            # Strip markdown fences if model adds them
+            if raw.startswith("```"):
+                raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                if raw.startswith("json"):
+                    raw = raw[4:].strip()
+
+            details = json.loads(raw)
+            details = details[:3]
+
+            for idx, d in enumerate(details):
+                cname = d.get("crop", "").lower()
+                d["emoji"] = CropRecommendationAgent._CROP_EMOJI.get(cname, "🌱")
+                d.setdefault("rank", idx + 1)
+
+            print(f"   ✅ Ollama recommendations ready in {round(time.time()-t0,2)}s")
+            return details
+
+        except Exception as _oe:
+            print(f"   ⚠️  Ollama offline or parse error ({_oe}) — using rule-based fallback.")
+            return CropRecommendationAgent._rule_based_fallback(
+                soil_type, n, p, k, temp, rain, water_const
+            )
+
+    # ── Rule-based fallback (Ollama offline) ──────────────────────────────
+    @staticmethod
+    def _rule_based_fallback(soil_type, n, p, k, temp, rain, water_const):
+        soil  = soil_type.lower()
         water = water_const.lower()
+        crops = []
         if water == 'low':
-            recommendations = ['Pearl Millet', 'Chickpea', 'Moth Beans'] if soil in ('red', 'laterite', 'sandy') else ['Sorghum', 'Chickpea', 'Lentil']
+            crops = ['Pearl Millet', 'Chickpea', 'Moth Beans'] if soil in ('red', 'laterite', 'sandy') else ['Sorghum', 'Chickpea', 'Lentil']
         elif soil == 'black':
-            if n > 40 and temp > 22: recommendations.append('Cotton')
-            if rain > 600 or water == 'high': recommendations.append('Wheat')
-            recommendations.append('Soybean')
+            if n > 40 and temp > 22: crops.append('Cotton')
+            if rain > 600 or water == 'high': crops.append('Wheat')
+            crops.append('Soybean')
         elif soil == 'alluvial':
-            if water == 'high': recommendations.append('Rice')
-            if n > 30: recommendations.append('Sugarcane')
-            recommendations.append('Maize')
+            if water == 'high': crops.append('Rice')
+            if n > 30: crops.append('Sugarcane')
+            crops.append('Maize')
         elif soil in ('red', 'laterite'):
-            recommendations += ['Groundnut', 'Finger Millet']
+            crops += ['Groundnut', 'Finger Millet', 'Sorghum']
         elif soil == 'sandy':
-            recommendations = ['Pearl Millet', 'Watermelon', 'Sesame']
-        else:
-            recommendations = ['Maize', 'Sorghum', 'Pigeon Peas']
-        
-        if not recommendations:
-            recommendations = ["Wheat", "Rice", "Corn"]
-            
-        return ", ".join(recommendations[:3])
+            crops = ['Pearl Millet', 'Watermelon', 'Sesame']
+        if not crops:
+            crops = ['Maize', 'Sorghum', 'Pigeon Peas']
+        crops = crops[:3]
+
+        details = []
+        for idx, crop in enumerate(crops):
+            cname = crop.lower()
+            details.append({
+                "crop": crop,
+                "rank": idx + 1,
+                "suitability_score": 82 - idx * 8,
+                "emoji": CropRecommendationAgent._CROP_EMOJI.get(cname, "🌱"),
+                "why_recommended": (
+                    f"{crop} is well-suited to {soil_type} soil with N={n}, P={p}, K={k} mg/kg. "
+                    f"It performs reliably at {temp}°C with {rain} mm average rainfall and {water_const.lower()} water supply."
+                ),
+                "key_features": [
+                    f"Thrives in {soil_type} soil conditions",
+                    f"Adapted to {temp}°C temperature range",
+                    f"Requires {water_const.lower()} water — matches farm supply",
+                ],
+                "nutritional_importance": (
+                    f"{crop} is a staple crop in Indian agriculture with strong market demand "
+                    f"and contributes to both food security and farmer income."
+                ),
+                "growing_tips": [
+                    "Prepare land thoroughly before sowing",
+                    "Follow recommended plant spacing for best yield",
+                    "Monitor regularly for pests and apply organic controls first",
+                ],
+                "ideal_season": "Kharif (June–Oct) or Rabi (Nov–Apr) depending on region",
+                "expected_yield": "Varies by region and farming practice",
+                "water_need": water_const,
+            })
+        return details
 
 class CropPlannerAgent:
+    # Known crop names for clean extraction
+    _KNOWN_CROPS = [
+        'Rice', 'Wheat', 'Corn', 'Maize', 'Sugarcane', 'Cotton', 'Soybean',
+        'Tomato', 'Tomatoes', 'Onion', 'Garlic', 'Potato', 'Sunflower',
+        'Mustard', 'Chickpea', 'Groundnut', 'Marigold', 'Sorghum', 'Millet',
+        'Pearl Millet', 'Finger Millet', 'Lentil', 'Pigeon Peas', 'Jute',
+        'Banana', 'Papaya', 'Sesame', 'Barley', 'Oat',
+    ]
+
+    @staticmethod
+    def _sanitize_crop_name(raw: str) -> str:
+        """
+        Extract a clean crop name from whatever was submitted.
+        If the input is longer than 40 chars (i.e. full AI text), scan it
+        for a known crop name and return that. Otherwise return the first
+        word-pair (handles 'Pearl Millet', 'Pigeon Peas', etc.).
+        """
+        raw = (raw or '').strip()
+        if len(raw) <= 40:
+            # Looks like a normal short crop name — just title-case the first token
+            first = raw.split('\n')[0].split('.')[0].strip()
+            return first[:64] if first else 'Unknown'
+
+        # Long string: scan for a known crop name
+        raw_lower = raw.lower()
+        for crop in CropPlannerAgent._KNOWN_CROPS:
+            if crop.lower() in raw_lower:
+                return crop
+        # Last resort: return first word, max 40 chars
+        return raw.split()[0][:40]
+
     @staticmethod
     def generate_plan(farmer_id, crop_name):
+        # ── Sanitize: store only the clean crop name in DB ───────────
+        clean_crop_name = CropPlannerAgent._sanitize_crop_name(crop_name)
+
         print("\n" + "━" * 60)
         print("📋 [CropPlanner] Generating crop management plan")
-        print(f"   Crop     : {crop_name}")
-        print(f"   Farmer ID: {farmer_id}")
+        print(f"   Crop (raw)  : {crop_name[:60]}{'...' if len(str(crop_name)) > 60 else ''}")
+        print(f"   Crop (clean): {clean_crop_name}")
+        print(f"   Farmer ID   : {farmer_id}")
         print("━" * 60)
         plan = {}
         prompt = f"""You are an expert Indian agronomist. Generate a detailed crop management plan for {crop_name} farming in India.
@@ -385,7 +608,7 @@ Output EXACTLY this JSON structure:
         query = f"""INSERT INTO crop_plans 
                    (farmer_id, crop_name, sowing_schedule, irrigation_plan, 
                     fertilizer_schedule, pest_alerts, harvest_timeline) 
-                   VALUES ({int(farmer_id)}, '{safe_str(crop_name)}', '{safe_str(plan['sowing_schedule'])}', '{safe_str(plan['irrigation_plan'])}', 
+                   VALUES ({int(farmer_id)}, '{safe_str(clean_crop_name)}', '{safe_str(plan['sowing_schedule'])}', '{safe_str(plan['irrigation_plan'])}', 
                    '{safe_str(plan['fertilizer_schedule'])}', '{safe_str(plan['pest_alerts'])}', '{safe_str(plan['harvest_timeline'])}');"""
 
         execute_fluxbase_sql(query)
@@ -548,29 +771,327 @@ class DiseaseDiagnosisAgent:
 
 class ReportAgent:
     @staticmethod
-    def generate_report(farmer_id):
-        profile_res = execute_fluxbase_sql(f"SELECT * FROM farmer_profile WHERE farmer_id={int(farmer_id)}")
-        profile = profile_res['rows'][0] if profile_res.get('rows') else None
+    def _calculate_yield_metrics(land_size: float, main_crop: str, companion_crop: str) -> dict:
+        base_yields = {
+            'rice': 2.5, 'wheat': 1.9, 'maize': 2.2, 'cotton': 0.5,
+            'sugarcane': 35.0, 'groundnut': 0.9, 'soybean': 1.0, 'chickpea': 0.7,
+            'pigeon peas': 0.6, 'pearl millet': 1.2, 'sorghum': 1.1, 'lentil': 0.6,
+            'tomatoes': 8.0, 'corn': 2.2, 'banana': 15.0, 'coconut': 5.0,
+            'sunflower': 0.8, 'mustard': 0.8, 'jute': 2.0, 'finger millet': 1.3,
+            'vegetables': 5.0, 'papaya': 12.0, 'sesame': 0.5,
+        }
+        companion_bonus_map = {
+            'soybean': 0.08, 'chickpea': 0.07, 'pigeon peas': 0.07,
+            'lentil': 0.06, 'clover': 0.06, 'marigold': 0.05, 'marigolds': 0.05,
+            'coriander': 0.04, 'beans': 0.06, 'cover crop': 0.05,
+        }
+        mc = (main_crop or 'Corn').lower().strip()
+        cc = (companion_crop or '').lower().strip() if companion_crop and companion_crop.lower() != 'none' else ''
 
-        plan_res = execute_fluxbase_sql(f"SELECT * FROM crop_plans WHERE farmer_id={int(farmer_id)} ORDER BY created_at DESC LIMIT 1")
-        plan = plan_res['rows'][0] if plan_res.get('rows') else None
+        base = base_yields.get(mc)
+        if not base:
+            for k, v in base_yields.items():
+                if k in mc or mc in k:
+                    base = v
+                    break
+        if not base:
+            base = 1.8
 
-        report_text = "=== SUPERFARMER ADVISORY REPORT ===\n"
-        if profile:
-            report_text += f"Farmer: {profile.get('name')} | Location: {profile.get('location')}\n"
+        companion_bonus = 0.0
+        for k, bonus in companion_bonus_map.items():
+            if k in cc:
+                companion_bonus = bonus
+                break
+        intercrop_boost = min(0.15 + companion_bonus, 0.30)
+        normal_penalty = 0.10
 
-        if plan:
-            report_text += f"\n-- Active Crop Plan: {plan.get('crop_name')} --\n"
-            report_text += f"Status: {plan.get('status')}\n"
-            report_text += f"Irrigation: {plan.get('irrigation_plan')}\n"
-            report_text += f"Fertilizer: {plan.get('fertilizer_schedule')}\n"
-            report_text += f"Sowing: {plan.get('sowing_schedule')}\n"
-            report_text += f"Harvest: {plan.get('harvest_timeline')}\n"
+        opt_per_acre = round(base * (1 + intercrop_boost), 2)
+        norm_per_acre = round(base * (1 - normal_penalty), 2)
+        improvement_pct = round(((opt_per_acre - norm_per_acre) / max(0.1, norm_per_acre)) * 100, 1)
 
-        report_text += "\nNote: This is an AI-generated synthesis. Please consult local agronomic extensions for critical actions."
+        opt_total = round(opt_per_acre * land_size, 2)
+        norm_total = round(norm_per_acre * land_size, 2)
+        extra_tons = round(opt_total - norm_total, 2)
+        extra_inr = int(extra_tons * 15000)
 
-        execute_fluxbase_sql(f"INSERT INTO reports (farmer_id, report_text) VALUES ({int(farmer_id)}, '{safe_str(report_text)}')")
-        return report_text
+        return {
+            "base_yield": base,
+            "optimized_total": opt_total,
+            "normal_total": norm_total,
+            "improvement_pct": improvement_pct,
+            "extra_tons": extra_tons,
+            "extra_inr": extra_inr
+        }
+
+    @staticmethod
+    def _compress_to_5_6_lines(farmer_name, location, land_size, water, goals,
+                                soil_type, soil_npk, rec_crops, crop_name, plan,
+                                spatial_main, spatial_comp, spatial_mode, spatial_score,
+                                spatial_soil, spatial_yield, weather_brief, yield_metrics,
+                                nutrient_risk):
+        # Deterministic 6 lines corresponding to each required domain
+        l1 = f"Farm Details: {farmer_name}'s {land_size}-acre holding in {location} has {soil_type.lower()} soil with {water.lower()} water availability ({soil_npk})."
+        l2 = f"Crop Recommendation: AI recommends {rec_crops} as optimal choices matching local soil nutrients and regional climate."
+        
+        sow = (plan.get('sowing_schedule') or 'Seasonal schedule based on monsoon')[:60]
+        irrig = (plan.get('irrigation_plan') or 'Scheduled drip irrigation')[:50]
+        pest = (plan.get('pest_alerts') or 'Routine pest vigilance and bio-controls')[:50]
+        l3 = f"Crop Plan ({crop_name}): Sowing window: {sow}; irrigation: {irrig}; pest defense: {pest}."
+
+        l4 = f"Spatial Layout: {spatial_mode} pairing {spatial_main} with {spatial_comp} companion (score: {spatial_score}/100) to optimize sunlight and {spatial_soil.lower()}."
+        
+        wb = (weather_brief or 'Favorable regional forecast; continue scheduled field activities').replace('\n', ' ')[:95]
+        nr_action = nutrient_risk.get('suggested_action') if nutrient_risk else None
+        if nr_action:
+            l5 = f"Weather & Risk: {wb} - Action: {nr_action[:65]}."
+        else:
+            l5 = f"Weather & Risk: {wb} - maintain regular soil moisture and weed surveillance."
+
+        yt = spatial_yield or yield_metrics.get('optimized_total', 2.5)
+        boost = yield_metrics.get('improvement_pct', 22.0)
+        extra_t = yield_metrics.get('extra_tons', 0.5)
+        extra_inr = yield_metrics.get('extra_inr', 15000)
+        l6 = f"Yield & Profit: Projected harvest of {yt} tonnes (+{boost}% over traditional monoculture, +{extra_t}t extra), generating ~Rs {extra_inr:,} in additional seasonal profit."
+
+        fallback_lines = [l1, l2, l3, l4, l5, l6]
+
+        # LLM compression attempt
+        context = (
+            f"Farmer: {farmer_name}, Location: {location}, Land: {land_size} acres, Water: {water}, Soil: {soil_type} ({soil_npk})\n"
+            f"AI Recommended Crops: {rec_crops}\n"
+            f"Crop Plan: Crop={crop_name}, Sowing={sow}, Irrigation={irrig}, Pest={pest}\n"
+            f"Spatial Layout: Main={spatial_main}, Companion={spatial_comp}, Mode={spatial_mode}, Score={spatial_score}/100, Soil Impact={spatial_soil}\n"
+            f"Weather: {weather_brief}\n"
+            f"Yield & Profit: Total={yt} tonnes, Boost=+{boost}%, Extra Produce=+{extra_t} tonnes, Extra Income=+Rs {extra_inr:,}\n"
+            f"Nutrient Risk: {nutrient_risk.get('risk_level', 'Normal')} ({nutrient_risk.get('suggested_action', 'None')})"
+        )
+
+        prompt = f"""You are SuperFarmer's Chief Agronomic Synthesizer.
+Synthesize the collected agricultural data from all specialized agents into an EXACT 5 to 6 line report for the farmer.
+
+STRICT INSTRUCTIONS:
+- You must output EXACTLY 5 or 6 concise lines (Line 1 to Line 6).
+- Include ONLY the most important and useful information for the farmer:
+  Line 1: Farmer/farm details (Name, location, acreage, water, soil)
+  Line 2: Crop recommendation (Top AI recommended crops)
+  Line 3: Crop plan (Sowing window, irrigation schedule, pest management)
+  Line 4: Spatial/farming layout (Layout type, crop companion pairing, efficiency)
+  Line 5: Weather/risk information (Upcoming weather conditions, immediate action/alerts)
+  Line 6: Yield or profit-related insights (Projected harvest tonnes, % gain, extra Rs income)
+- Do NOT include full agent outputs, detailed explanations, PDF content, system architecture, workflows, greetings, or filler.
+- Each line must be a single concise sentence packed with key information.
+
+DATA:
+{context}
+"""
+        try:
+            resp = _call_llm(
+                system_prompt="You are a precision agricultural intelligence summarizer. Output exactly 5 to 6 concise, information-dense lines.",
+                user_message=prompt,
+                label="ReportCompressor"
+            )
+            if resp:
+                raw_lines = [l.strip() for l in resp.split('\n') if l.strip() and not l.strip().startswith('```')]
+                cleaned = []
+                for l in raw_lines:
+                    c = re.sub(r'^(Line\s*\d+\s*[:\-.]|\d+[\.\)]|\-|\*)\s*', '', l).strip()
+                    c = c.replace('**', '').replace('__', '').strip()
+                    if c:
+                        cleaned.append(c)
+                if 5 <= len(cleaned) <= 6:
+                    print(f"   [ReportCompressor] LLM generated clean {len(cleaned)} lines")
+                    return cleaned
+                elif len(cleaned) > 6:
+                    print(f"   [ReportCompressor] LLM generated {len(cleaned)} lines, trimming to 6")
+                    return cleaned[:6]
+                elif len(cleaned) == 4:
+                    cleaned.append(l6)
+                    return cleaned
+        except Exception as llm_e:
+            print(f"   [ReportCompressor] LLM compression fallback ({llm_e})")
+
+        return fallback_lines
+
+    @staticmethod
+    def generate_report(farmer_id=None, **kwargs):
+        import os
+        import json
+        import re
+        import time
+        from config import execute_fluxbase_sql
+
+        if farmer_id is None:
+            farmer_id = kwargs.get('farmer_id')
+
+        try:
+            fid = int(farmer_id)
+        except (TypeError, ValueError):
+            fid = 0
+
+        print("\n" + "=" * 60)
+        print("📄 [ReportAgent] Generating concise 5-6 line multi-agent report")
+        print(f"   Farmer ID : {fid}")
+        print("=" * 60)
+
+        # ── 1. Fetch Profile (IntakeAgent) ───────────────────────────
+        profile = {}
+        try:
+            profile_res = execute_fluxbase_sql(f"SELECT * FROM farmer_profile WHERE farmer_id={fid} LIMIT 1")
+            profile = profile_res['rows'][0] if profile_res.get('rows') else {}
+        except Exception as e:
+            print(f"   [Report] Profile fetch error: {e}")
+
+        farmer_name = profile.get('name') or 'SuperFarmer User'
+        location = profile.get('location') or 'Local Region'
+        land_size = profile.get('land_size', '1.0')
+        water = profile.get('water_availability') or 'Medium'
+        goals = profile.get('farming_goals') or 'Standard yield & profit'
+
+        try:
+            land_size_val = float(land_size)
+            if land_size_val <= 0:
+                land_size_val = 1.0
+        except (TypeError, ValueError):
+            land_size_val = 1.0
+
+        # ── 2. Fetch Soil Records (Soil Data) ────────────────────────
+        soil_data = {}
+        try:
+            soil_res = execute_fluxbase_sql(f"SELECT * FROM soil_records WHERE farmer_id={fid} ORDER BY recorded_at DESC LIMIT 1")
+            soil_data = soil_res['rows'][0] if soil_res.get('rows') else {}
+        except Exception as e:
+            print(f"   [Report] Soil records fetch error: {e}")
+
+        soil_type = soil_data.get('soil_type') or 'Alluvial / Loamy'
+        soil_n = soil_data.get('nitrogen')
+        soil_p = soil_data.get('phosphorus')
+        soil_k = soil_data.get('potassium')
+        soil_npk_str = f"N={soil_n}, P={soil_p}, K={soil_k} mg/kg" if (soil_n is not None and soil_p is not None and soil_k is not None) else "Balanced regional NPK"
+
+        # ── 3. Fetch Crop Recommendations (CropRecommendationAgent) ──
+        recommendations = {}
+        try:
+            rec_res = execute_fluxbase_sql(f"SELECT * FROM crop_recommendations WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
+            recommendations = rec_res['rows'][0] if rec_res.get('rows') else {}
+        except Exception as e:
+            print(f"   [Report] Recommendations fetch error: {e}")
+
+        rec_crops = recommendations.get('recommended_crops') or 'Corn, Soybean, Groundnut'
+
+        # ── 4. Fetch Crop Plan (CropPlannerAgent) ─────────────────────
+        plan = {}
+        try:
+            plan_res = execute_fluxbase_sql(f"SELECT * FROM crop_plans WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
+            plan = plan_res['rows'][0] if plan_res.get('rows') else {}
+        except Exception as e:
+            print(f"   [Report] Plan fetch error: {e}")
+
+        crop_name = plan.get('crop_name') or 'Corn'
+
+        # ── 5. Fetch Spatial Twin Log (SpatialPlannerAgent) ───────────
+        spatial = {}
+        try:
+            sp_res = execute_fluxbase_sql(f"SELECT * FROM spatial_twin_log WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
+            spatial = sp_res['rows'][0] if sp_res.get('rows') else {}
+        except Exception:
+            pass
+
+        spatial_main = spatial.get('main_crop') or crop_name
+        spatial_comp = spatial.get('companion_crop') or ('Soybean' if spatial_main == 'Corn' else 'Marigold')
+        spatial_mode = spatial.get('layout_mode') or 'Hexagonal Staggered Grid'
+        spatial_score = spatial.get('layout_score', 88)
+        spatial_soil = spatial.get('soil_impact') or 'improves soil nitrogen'
+        spatial_yield = spatial.get('total_yield_t')
+
+        # ── 6. Fetch Weather Intelligence (WeatherAgent) ──────────────
+        weather_raw = ""
+        weather_brief = "Stable regional weather expected; proceed with regular field operations."
+        if location and location.lower() != 'unknown':
+            try:
+                from agents.agents import WeatherAgent
+                weather_raw = WeatherAgent.analyze_weather(location)
+                if "**Agent Suggestion:**" in weather_raw:
+                    sug = weather_raw.split("**Agent Suggestion:**", 1)[1].strip()
+                    sug_clean = re.sub(r'\*+', '', sug).strip()
+                    weather_brief = f"3-day forecast for {location}: {sug_clean}"
+                elif weather_raw and "failed" not in weather_raw.lower() and "missing" not in weather_raw.lower():
+                    first_lines = [l.strip() for l in weather_raw.split('\n') if l.strip()]
+                    weather_brief = "; ".join(first_lines[:2])
+            except Exception as w_err:
+                print(f"   [Report] Weather fetch error: {w_err}")
+
+        # ── 7. Fetch Yield & Financial Impact (YieldComparisonAgent) ──
+        yield_metrics = ReportAgent._calculate_yield_metrics(land_size_val, spatial_main, spatial_comp)
+        if not spatial_yield:
+            spatial_yield = yield_metrics.get('optimized_total', 2.5)
+
+        # ── 8. Fetch Nutrient Risk Log ────────────────────────────────
+        nutrient_risk = {}
+        try:
+            nr_res = execute_fluxbase_sql(f"SELECT * FROM nutrient_risk_log WHERE farmer_id={fid} ORDER BY logged_at DESC LIMIT 1")
+            nutrient_risk = nr_res['rows'][0] if nr_res.get('rows') else {}
+        except Exception:
+            pass
+
+        # ── 9. EXCLUDE AI Advisor / Chat Conversations ────────────────
+        # Per explicit instruction: AI Advisor / SuperFarmerChatAgent is NOT included
+
+        # ── 10. Compress all extracted information into 5-6 lines ─────
+        summary_lines = ReportAgent._compress_to_5_6_lines(
+            farmer_name=farmer_name,
+            location=location,
+            land_size=land_size_val,
+            water=water,
+            goals=goals,
+            soil_type=soil_type,
+            soil_npk=soil_npk_str,
+            rec_crops=rec_crops,
+            crop_name=crop_name,
+            plan=plan,
+            spatial_main=spatial_main,
+            spatial_comp=spatial_comp,
+            spatial_mode=spatial_mode,
+            spatial_score=spatial_score,
+            spatial_soil=spatial_soil,
+            spatial_yield=spatial_yield,
+            weather_brief=weather_brief,
+            yield_metrics=yield_metrics,
+            nutrient_risk=nutrient_risk
+        )
+
+        compressed_summary = "\n".join(summary_lines)
+
+        # ── 11. Reports history count ────────────────────────────────
+        report_count = 0
+        try:
+            rc_res = execute_fluxbase_sql(f"SELECT COUNT(*) as cnt FROM reports WHERE farmer_id={fid}")
+            report_count = rc_res['rows'][0].get('cnt', 0) if rc_res.get('rows') else 0
+        except Exception:
+            pass
+
+        # Final concise 5-6 line report response containing only key information
+        report_data = {
+            "report": compressed_summary,
+            "lines": summary_lines,
+            "summary_lines": summary_lines,
+            "farmer_name": farmer_name,
+            "location": location,
+            "land_size": str(land_size_val),
+            "generated_at": time.strftime("%d %B %Y, %I:%M %p"),
+            "report_number": report_count + 1
+        }
+
+        # Save to reports table in Fluxbase
+        try:
+            safe_text = compressed_summary.replace("'", "''")
+            execute_fluxbase_sql(f"INSERT INTO reports (farmer_id, report_text) VALUES ({fid}, '{safe_text}')")
+        except Exception as insert_err:
+            print(f"   [Report] DB save error: {insert_err}")
+
+        print(f"   ✅ Final report ready: exactly {len(summary_lines)} lines")
+        print("=" * 60 + "\n")
+        return report_data
+
 
 class SpatialPlannerAgent:
     CROP_DB = {
@@ -602,6 +1123,13 @@ class SpatialPlannerAgent:
         'Potato':    ['Marigold', 'Garlic', 'Corn'],
         'Onion':     ['Tomato', 'Corn', 'Marigold', 'Garlic'],
         'Maize':     ['Soybean', 'Groundnut', 'Marigold'],
+        # ── Previously missing — companion warning was always firing ──
+        'Garlic':    ['Marigold', 'Onion', 'Tomato'],
+        'Mustard':   ['Chickpea', 'Soybean', 'Wheat'],
+        'Chickpea':  ['Mustard', 'Soybean', 'Wheat'],
+        'Sunflower': ['Maize', 'Groundnut', 'Soybean'],
+        'Groundnut': ['Corn', 'Maize', 'Soybean', 'Sunflower'],
+        'Soybean':   ['Corn', 'Maize', 'Groundnut', 'Sunflower'],
     }
 
     @staticmethod
@@ -632,159 +1160,714 @@ class SpatialPlannerAgent:
             y += math.floor(sp * 0.866)
         return nodes
 
+    # ── NITROGEN-FIXER lookup (used by decision rules) ─────────────
+    _N_FIXERS = {'Chickpea', 'Soybean', 'Groundnut'}
+    # High-water crops that cannot survive Low-water farms
+    _HIGH_WATER_CROPS = {'Rice', 'Sugarcane', 'Tomato'}
+    # Drought-tolerant override pool
+    _DRY_FALLBACKS = ['Wheat', 'Chickpea', 'Groundnut', 'Mustard', 'Soybean']
+
+    @staticmethod
+    def _fetch_farmer_memory(farmer_id):
+        """
+        MEMORY FETCH — Pull farmer history from Fluxbase.
+        Returns a dict with: prev_crop, nitrogen_level, water, past_yield.
+        All fields default gracefully if data is missing.
+        """
+        memory = {
+            'prev_crop':      None,   # crop_name from latest crop_plan
+            'nitrogen_level': 'Medium', # derived from crop history
+            'water':          'Medium', # water_availability from profile
+            'past_yield':     None,   # from spatial_twin_log (if exists)
+            'location':       'Unknown',
+            'land_size':      1.0,
+            'farmer_name':    'Unknown',
+        }
+        try:
+            # Profile
+            p = execute_fluxbase_sql(
+                f"SELECT name, location, land_size, water_availability FROM farmer_profile "
+                f"WHERE farmer_id={int(farmer_id)} LIMIT 1"
+            )
+            if p.get('rows'):
+                row = p['rows'][0]
+                memory['farmer_name'] = row.get('name', 'Unknown')
+                memory['location']    = row.get('location', 'Unknown')
+                memory['water']       = (row.get('water_availability') or 'Medium').strip().capitalize()
+                try:
+                    memory['land_size'] = float(row.get('land_size', 1.0))
+                except (TypeError, ValueError):
+                    pass
+        except Exception as e:
+            print(f"   [Memory] Profile fetch failed: {e}")
+
+        try:
+            # Previous season crop from latest crop_plan
+            cp = execute_fluxbase_sql(
+                f"SELECT crop_name FROM crop_plans WHERE farmer_id={int(farmer_id)} "
+                f"ORDER BY created_at DESC LIMIT 1"
+            )
+            if cp.get('rows'):
+                memory['prev_crop'] = (cp['rows'][0].get('crop_name') or '').strip()
+        except Exception as e:
+            print(f"   [Memory] Crop plan fetch failed: {e}")
+
+        try:
+            # Derive nitrogen level: if a N-fixing crop was previously recommended → soil was N-depleted
+            cr = execute_fluxbase_sql(
+                f"SELECT recommended_crops FROM crop_recommendations WHERE farmer_id={int(farmer_id)} "
+                f"ORDER BY created_at DESC LIMIT 1"
+            )
+            if cr.get('rows'):
+                rec_str = (cr['rows'][0].get('recommended_crops') or '').lower()
+                # If a legume was top-recommended → soil was low in N
+                if any(nf in rec_str for nf in ['chickpea', 'soybean', 'groundnut', 'lentil']):
+                    memory['nitrogen_level'] = 'Low'
+                elif any(hi in rec_str for hi in ['sugarcane', 'rice', 'cotton']):
+                    memory['nitrogen_level'] = 'High'
+                else:
+                    memory['nitrogen_level'] = 'Medium'
+        except Exception as e:
+            print(f"   [Memory] Crop rec fetch failed: {e}")
+
+        try:
+            # Past yield from spatial_twin_log (graceful skip if table missing)
+            sl = execute_fluxbase_sql(
+                f"SELECT total_yield_t, main_crop FROM spatial_twin_log WHERE farmer_id={int(farmer_id)} "
+                f"ORDER BY created_at DESC LIMIT 1"
+            )
+            if sl.get('rows'):
+                memory['past_yield']      = sl['rows'][0].get('total_yield_t')
+                memory['past_twin_crop']  = sl['rows'][0].get('main_crop', '')
+        except Exception:
+            pass  # table may not exist yet
+
+        return memory
+
+    @staticmethod
+    def _run_decision_rules(user_crop_key, memory):
+        """
+        STEP 1-3 MEMORY DECISION ENGINE — deterministic rule application.
+        Returns: final_crop_key, companion_override, memory_log[], warnings[], soil_impact, override details.
+        """
+        DB         = SpatialPlannerAgent.CROP_DB
+        N_FIXERS   = SpatialPlannerAgent._N_FIXERS
+        HW_CROPS   = SpatialPlannerAgent._HIGH_WATER_CROPS
+        DRY_POOL   = SpatialPlannerAgent._DRY_FALLBACKS
+        MATRIX     = SpatialPlannerAgent.COMPANION_MATRIX
+
+        final_crop      = user_crop_key
+        companion_override = None
+        memory_log      = []
+        warnings        = []
+        soil_impact     = 'neutral'
+        override_crop   = None
+        override_reason = None
+
+        prev_crop  = (memory.get('prev_crop') or '').strip()
+        nitrogen   = memory.get('nitrogen_level', 'Medium')
+        water_farm = memory.get('water', 'Medium')          # Low / Medium / High
+        water_crop = DB.get(user_crop_key, {}).get('water', 'Medium')
+
+        # ── STEP 1: Memory Analysis ──────────────────────────────────
+        if prev_crop:
+            memory_log.append(f"✅ Step 1: Previous season crop was '{prev_crop}'.")
+        else:
+            memory_log.append("✅ Step 1: No previous crop record found — first season or new farmer.")
+
+        memory_log.append(f"✅ Step 2: Soil nitrogen level inferred as '{nitrogen}' from crop history.")
+        memory_log.append(f"✅ Step 3: Farm water availability is '{water_farm}'. "
+                          f"Selected crop '{user_crop_key}' needs '{water_crop}' water.")
+
+        # ── STEP 2A: Crop Rotation Rule ──────────────────────────────
+        if prev_crop and prev_crop.lower() == user_crop_key.lower():
+            warnings.append(
+                f"⚠️ Crop Rotation Risk: '{prev_crop}' was grown last season. "
+                f"Repeating the same crop depletes specific soil nutrients and increases pest pressure."
+            )
+            memory_log.append(
+                f"⚠️ Step 4 (Rotation): Same crop '{prev_crop}' repeated. "
+                f"Forcing a nitrogen-fixing companion to recover soil fertility."
+            )
+            # Force N-fixing companion to mitigate soil depletion
+            # Pick best N-fixer that is a valid companion for this crop
+            valid_companions = MATRIX.get(user_crop_key, [])
+            fixer_companions = [c for c in valid_companions if c in N_FIXERS]
+            if fixer_companions:
+                companion_override = max(fixer_companions,
+                    key=lambda c: DB[c].get('companion_score', 0))
+                memory_log.append(
+                    f"✅ Step 4 (Rotation fix): Companion forced to '{companion_override}' "
+                    f"(nitrogen-fixer) to restore soil health."
+                )
+            else:
+                # Fallback: any N-fixer available in DB
+                companion_override = 'Chickpea' if 'Chickpea' in DB else 'Soybean'
+                memory_log.append(
+                    f"✅ Step 4 (Rotation fix): Global fallback companion '{companion_override}' applied."
+                )
+
+        # ── STEP 2B: Soil Nitrogen Rule ──────────────────────────────
+        if nitrogen == 'Low' and companion_override not in N_FIXERS:
+            # Force N-fixer as companion (may override rotation selection too)
+            valid_companions = MATRIX.get(final_crop, [])
+            fixer_companions = [c for c in valid_companions if c in N_FIXERS]
+            if fixer_companions:
+                companion_override = max(fixer_companions,
+                    key=lambda c: DB[c].get('companion_score', 0))
+            else:
+                companion_override = 'Chickpea' if 'Chickpea' in DB else 'Soybean'
+            memory_log.append(
+                f"✅ Step 5 (Nitrogen): Soil N is Low → companion '{companion_override}' "
+                f"selected to fix nitrogen and restore soil health."
+            )
+            soil_impact = 'improves'
+
+        # ── STEP 2C: Water Matching Rule ─────────────────────────────
+        if water_farm == 'Low' and user_crop_key in HW_CROPS:
+            # Override: find a drought-tolerant crop from the fallback pool
+            alt_crop = next((c for c in DRY_POOL if c in DB and c != user_crop_key), 'Wheat')
+            override_reason = (
+                f"Farm water availability is Low, but '{user_crop_key}' requires High water. "
+                f"Switched to '{alt_crop}' which is drought-tolerant."
+            )
+            memory_log.append(f"⚠️ Step 6 (Water): {override_reason}")
+            warnings.append(
+                f"⚠️ Water Mismatch Detected: '{user_crop_key}' needs High water but your farm has "
+                f"Low availability. Crop overridden to '{alt_crop}'."
+            )
+            final_crop    = alt_crop
+            override_crop = alt_crop
+            # Reset companion for the new crop
+            companion_override = None
+
+        # ── STEP 3: Soil Impact Assessment ───────────────────────────
+        if soil_impact == 'neutral':
+            final_crop_data = DB.get(final_crop, {})
+            comp_data       = DB.get(companion_override, {}) if companion_override else {}
+            is_fixer = (
+                final_crop_data.get('nitrogen') == 'Fixer' or
+                comp_data.get('nitrogen') == 'Fixer' or
+                (companion_override in N_FIXERS)
+            )
+            if is_fixer:
+                soil_impact = 'improves'
+            elif final_crop_data.get('nitrogen') == 'Consumer':
+                soil_impact = 'degrades'
+
+        memory_log.append(
+            f"✅ Step 7 (Output): Final decision — Crop: '{final_crop}', "
+            f"Companion override: '{companion_override or 'auto-select'}', "
+            f"Soil impact: '{soil_impact}'."
+        )
+
+        return {
+            'final_crop':       final_crop,
+            'companion_override': companion_override,
+            'memory_log':       memory_log,
+            'warnings':         warnings,
+            'soil_impact':      soil_impact,
+            'override_crop':    override_crop,
+            'override_reason':  override_reason,
+        }
+
     @staticmethod
     def generate_layout(farmer_id, width, height, main_crop, layout_preference="Auto", acres=None):
         """
-        Intelligent Spatial Twin Agent:
-        Generates optimized multi-crop layouts based on Hexagonal algorithmic design
-        and database values.
+        Structured Rule-Based Spatial Twin Agent.
+        Implements: zone division, hexagonal placement, companion scoring,
+        layout preference, border crops, sunlight orientation, quality score.
         """
+        import math
+
         try:
             w = float(width)
             h = float(height)
         except (TypeError, ValueError):
-            w, h = 800.0, 500.0
+            w, h = 600.0, 420.0
 
         print(f"\n━" * 60)
         print(f"🗺️  [Spatial Twin] Generating Digital Layout")
         print(f"   Land Bounds  : {w}x{h} px")
+        print(f"   Layout Pref  : {layout_preference}")
         print(f"   Main Crop    : {main_crop}")
 
-        # Fetch Farmer Context
-        farmer_name, land_size_val = "Unknown", 1.0
-        profile_data = {}
-        try:
-            p_res = execute_fluxbase_sql(f"SELECT * FROM farmer_profile WHERE farmer_id={int(farmer_id)}")
-            if p_res.get('rows'):
-                profile_data = p_res['rows'][0]
-                farmer_name = profile_data.get('name', 'Unknown')
-                try:
-                    land_size_val = float(acres) if acres else float(profile_data.get('land_size', 1.0))
-                except (ValueError, TypeError):
-                    land_size_val = 1.0
-            else:
-                if acres:
-                    try:
-                        land_size_val = float(acres)
-                    except (ValueError, TypeError):
-                        pass
-        except Exception:
-            land_size_val = 1.0
-
-        # Normalize incoming crop name → exact CROP_DB key
+        # ── 1. Crop Normalization ─────────────────────────────────────
         CROP_ALIASES = {
-            'tomatoes': 'Tomato', 'tomato': 'Tomato',
-            'corn': 'Corn', 'maize': 'Maize',
-            'wheat': 'Wheat', 'rice': 'Rice',
-            'sugarcane': 'Sugarcane', 'cotton': 'Cotton',
-            'soybean': 'Soybean', 'soybeans': 'Soybean',
-            'onion': 'Onion', 'onions': 'Onion',
-            'garlic': 'Garlic', 'potato': 'Potato', 'potatoes': 'Potato',
-            'sunflower': 'Sunflower', 'sunflowers': 'Sunflower',
-            'mustard': 'Mustard', 'chickpea': 'Chickpea', 'chickpeas': 'Chickpea',
-            'groundnut': 'Groundnut', 'groundnuts': 'Groundnut', 'peanut': 'Groundnut',
-            'marigold': 'Marigold', 'marigolds': 'Marigold',
+            'tomatoes': 'Tomato','tomato': 'Tomato',
+            'corn': 'Corn','maize': 'Maize','wheat': 'Wheat','rice': 'Rice',
+            'sugarcane': 'Sugarcane','cotton': 'Cotton',
+            'soybean': 'Soybean','soybeans': 'Soybean',
+            'onion': 'Onion','onions': 'Onion',
+            'garlic': 'Garlic','potato': 'Potato','potatoes': 'Potato',
+            'sunflower': 'Sunflower','sunflowers': 'Sunflower',
+            'mustard': 'Mustard','chickpea': 'Chickpea','chickpeas': 'Chickpea',
+            'groundnut': 'Groundnut','groundnuts': 'Groundnut','peanut': 'Groundnut',
+            'marigold': 'Marigold','marigolds': 'Marigold',
         }
         raw = (main_crop or '').strip()
         if raw and raw != 'Auto':
             normalized = CROP_ALIASES.get(raw.lower(), raw)
-            main_crop_key = normalized if normalized in SpatialPlannerAgent.CROP_DB else 'Corn'
+            requested_crop_key = normalized if normalized in SpatialPlannerAgent.CROP_DB else 'Corn'
         else:
-            main_crop_key = 'Corn'
+            requested_crop_key = 'Corn'
 
-        print(f"   Crop Lookup  : '{raw}' → '{main_crop_key}'")
-        main_data = SpatialPlannerAgent.CROP_DB[main_crop_key]
-        
-        # Determine optimal companion
-        companions_list = SpatialPlannerAgent.COMPANION_MATRIX.get(main_crop_key, [])
-        valid_companions = [c for c in companions_list if c in SpatialPlannerAgent.CROP_DB]
-        companion_data = SpatialPlannerAgent.CROP_DB[valid_companions[0]] if valid_companions else SpatialPlannerAgent.CROP_DB['Marigold']
-        
-        all_crops = [main_data, companion_data]
-        num_crops = len(all_crops)
-        print(f"   Partnership  : {main_data['name']} + {companion_data['name']}")
+        print(f"   Crop Lookup  : '{raw}' → '{requested_crop_key}'")
 
-        import math
+        # ── 2. Memory Fetch ──────────────────────────────────────────
+        print(f"   [Memory] Fetching farmer history for farmer_id={farmer_id}...")
+        memory = SpatialPlannerAgent._fetch_farmer_memory(farmer_id)
 
-        # Build zones — divide canvas horizontally by crop ratio
-        total_weight = sum([1.0 / c['spacing'] for c in all_crops])
-        zones = []
-        x_cursor = 0.0
-        for i, crop in enumerate(all_crops):
-            weight = (1.0 / crop['spacing']) / total_weight
-            zone_w = math.floor(w * weight)
-            zones.append({
-                'x': x_cursor, 'y': 0,
-                'w': zone_w, 'h': h,
-                'crop': crop['name'], 'color': crop['color'],
-                'label': f"Zone {i + 1}: {crop['name']}"
-            })
-            x_cursor += zone_w
-        if zones:
-            zones[-1]['w'] = w - zones[-1]['x']
+        # Resolve land size: prefer map-drawn acres, then DB value
+        farmer_name   = memory['farmer_name']
+        land_size_val = float(acres) if acres else memory['land_size']
+        try:
+            land_size_val = float(land_size_val)
+        except (TypeError, ValueError):
+            land_size_val = 1.0
 
-        # Generate plant nodes
+        print(f"   [Memory] prev_crop='{memory['prev_crop']}' | nitrogen='{memory['nitrogen_level']}' | water='{memory['water']}'")
+
+        # ── 3. Decision Rules ────────────────────────────────────────
+        decision = SpatialPlannerAgent._run_decision_rules(requested_crop_key, memory)
+        main_crop_key = decision['final_crop']
+        main_data     = SpatialPlannerAgent.CROP_DB[main_crop_key]
+
+        if decision['override_crop']:
+            print(f"   [Memory] ⚠️  Crop overridden: '{requested_crop_key}' → '{main_crop_key}'")
+        for log_line in decision['memory_log']:
+            print(f"   [Memory] {log_line}")
+
+        # ── 3. Score-Based Companion Selection ───────────────────────
+        # Rank by companion_score in CROP_DB (highest wins)
+        companions_raw = SpatialPlannerAgent.COMPANION_MATRIX.get(main_crop_key, [])
+        valid_companions = [c for c in companions_raw if c in SpatialPlannerAgent.CROP_DB]
+        if valid_companions:
+            companion_key = max(valid_companions,
+                                key=lambda c: SpatialPlannerAgent.CROP_DB[c].get('companion_score', 0))
+        else:
+            companion_key = 'Marigold'
+        companion_data = SpatialPlannerAgent.CROP_DB[companion_key]
+
+        print(f"   Partnership  : {main_data['name']} + {companion_data['name']} "
+              f"(score {companion_data.get('companion_score',0)}/10)")
+
+        # ── 4. Zone Division with Layout Preference ──────────────────
+        pref = (layout_preference or 'Auto').strip()
+
+        def _make_zones_strip():
+            """Vertical strip division based on spacing weight."""
+            total_weight = (1.0/main_data['spacing']) + (1.0/companion_data['spacing'])
+            w_main = math.floor(w * (1.0/main_data['spacing']) / total_weight)
+            return [
+                {'x': 0,      'y': 0, 'w': w_main,   'h': h,
+                 'crop': main_data['name'],      'color': main_data['color'],
+                 'label': f"Zone 1 – {main_data['name']} (Strip)"},
+                {'x': w_main, 'y': 0, 'w': w-w_main,  'h': h,
+                 'crop': companion_data['name'], 'color': companion_data['color'],
+                 'label': f"Zone 2 – {companion_data['name']} (Strip)"},
+            ]
+
+        def _make_zones_row():
+            """Horizontal row division."""
+            total_weight = (1.0/main_data['spacing']) + (1.0/companion_data['spacing'])
+            h_main = math.floor(h * (1.0/main_data['spacing']) / total_weight)
+            return [
+                {'x': 0, 'y': 0,      'w': w, 'h': h_main,
+                 'crop': main_data['name'],      'color': main_data['color'],
+                 'label': f"Zone 1 – {main_data['name']} (Row)"},
+                {'x': 0, 'y': h_main, 'w': w, 'h': h-h_main,
+                 'crop': companion_data['name'], 'color': companion_data['color'],
+                 'label': f"Zone 2 – {companion_data['name']} (Row)"},
+            ]
+
+        def _make_zones_grid():
+            """Checkerboard interleaving — single full-canvas zone per crop,
+            nodes are interleaved by row parity inside hex_layout_interleaved."""
+            return [
+                {'x': 0, 'y': 0, 'w': w, 'h': h,
+                 'crop': main_data['name'],      'color': main_data['color'],
+                 'label': f"Zone 1 – {main_data['name']} (Grid)"},
+                {'x': 0, 'y': 0, 'w': w, 'h': h,
+                 'crop': companion_data['name'], 'color': companion_data['color'],
+                 'label': f"Zone 2 – {companion_data['name']} (Grid)"},
+            ]
+
+        if pref == 'Strip Layout':
+            zones = _make_zones_strip()
+            layout_mode = 'strip'
+        elif pref == 'Row Layout':
+            zones = _make_zones_row()
+            layout_mode = 'row'
+        elif pref == 'Grid Layout':
+            zones = _make_zones_grid()
+            layout_mode = 'grid'
+        else:  # Auto — spacing-weight strip (default)
+            zones = _make_zones_strip()
+            layout_mode = 'auto'
+
+        # ── 5. Sunlight orientation hint ─────────────────────────────
+        # Taller crop placed in the first zone (west/north) to avoid shading
+        if main_data['height_m'] < companion_data['height_m'] and layout_mode in ('strip','auto'):
+            zones[0]['crop']  = companion_data['name']
+            zones[0]['color'] = companion_data['color']
+            zones[0]['label'] = zones[0]['label'].replace(main_data['name'], companion_data['name']) + ' [tall→N]'
+            zones[1]['crop']  = main_data['name']
+            zones[1]['color'] = main_data['color']
+            zones[1]['label'] = zones[1]['label'].replace(companion_data['name'], main_data['name'])
+            crop_order = [companion_data, main_data]
+            sunlight_note = (f"{companion_data['name']} (taller, {companion_data['height_m']}m) placed on "
+                             f"north/west to avoid shading {main_data['name']} ({main_data['height_m']}m).")
+        else:
+            crop_order = [main_data, companion_data]
+            sunlight_note = (f"{main_data['name']} ({main_data['height_m']}m) and "
+                             f"{companion_data['name']} ({companion_data['height_m']}m) placed west→east. "
+                             f"Monitor for shade if taller plants face east.")
+
+        # ── 6. Plant Node Generation ─────────────────────────────────
         all_nodes = []
-        for i, crop in enumerate(all_crops):
-            zone = zones[i]
-            all_nodes.extend(SpatialPlannerAgent.hex_layout(crop, zone))
-            
-        print(f"   Nodes Placed : {len(all_nodes)}")
+        if layout_mode == 'grid':
+            # Interleaved hex: odd rows = main_data, even rows = companion_data
+            full_zone = {'x': 0, 'y': 0, 'w': w, 'h': h}
+            sp_main = main_data['spacing']
+            sp_comp = companion_data['spacing']
+            row = 0
+            y_cur = sp_main * 0.5
+            while y_cur < h - sp_main * 0.4:
+                cur_crop = main_data if row % 2 == 0 else companion_data
+                sp = cur_crop['spacing']
+                x_shift = (row % 2) * (sp / 2.0)
+                col = 0
+                x_cur = x_shift + sp * 0.5
+                while x_cur < w - sp * 0.4:
+                    all_nodes.append({
+                        'x': round(x_cur, 2), 'y': round(y_cur, 2),
+                        'type': cur_crop['name'], 'color': cur_crop['color'],
+                        'radius': max(4.0, sp * 0.32),
+                        'row': row, 'col': col,
+                        'height_m': cur_crop.get('height_m', 1.0),
+                        'zone': 1 if cur_crop == main_data else 2
+                    })
+                    col += 1
+                    x_cur += sp
+                row += 1
+                y_cur += math.floor(sp_main * 0.866)
+        else:
+            for i, crop in enumerate(crop_order):
+                zone = zones[i]
+                nodes = SpatialPlannerAgent.hex_layout(crop, zone)
+                for n in nodes:
+                    n['zone'] = i + 1
+                all_nodes.extend(nodes)
+
+        # ── 7. Edge / Border Crop (Marigold ring) ───────────────────
+        border_nodes = []
+        border_crop_name = 'Marigold'
+        BORDER_MARGIN = 8   # px from edge
+        if main_crop_key != 'Marigold' and companion_key != 'Marigold':
+            border_data = SpatialPlannerAgent.CROP_DB['Marigold']
+            bsp = border_data['spacing']
+            # Top edge
+            bx = bsp * 0.5
+            while bx < w:
+                border_nodes.append({'x': round(bx,2), 'y': BORDER_MARGIN,
+                    'type': 'Marigold', 'color': border_data['color'],
+                    'radius': max(4.0, bsp*0.3), 'row': -1, 'col': -1,
+                    'height_m': border_data['height_m'], 'zone': 0, 'border': True})
+                bx += bsp
+            # Bottom edge
+            bx = bsp * 0.5
+            while bx < w:
+                border_nodes.append({'x': round(bx,2), 'y': h - BORDER_MARGIN,
+                    'type': 'Marigold', 'color': border_data['color'],
+                    'radius': max(4.0, bsp*0.3), 'row': -1, 'col': -1,
+                    'height_m': border_data['height_m'], 'zone': 0, 'border': True})
+                bx += bsp
+            # Left edge
+            by = bsp
+            while by < h - BORDER_MARGIN:
+                border_nodes.append({'x': BORDER_MARGIN, 'y': round(by,2),
+                    'type': 'Marigold', 'color': border_data['color'],
+                    'radius': max(4.0, bsp*0.3), 'row': -1, 'col': -1,
+                    'height_m': border_data['height_m'], 'zone': 0, 'border': True})
+                by += bsp
+            # Right edge
+            by = bsp
+            while by < h - BORDER_MARGIN:
+                border_nodes.append({'x': w - BORDER_MARGIN, 'y': round(by,2),
+                    'type': 'Marigold', 'color': border_data['color'],
+                    'radius': max(4.0, bsp*0.3), 'row': -1, 'col': -1,
+                    'height_m': border_data['height_m'], 'zone': 0, 'border': True})
+                by += bsp
+
+        full_layout = border_nodes + all_nodes   # border rendered first (below)
+
+        # ── Apply companion override from decision rules ──────────────
+        # (override was set before companion_key was resolved; apply now if still relevant)
+        if decision.get('companion_override') and decision['companion_override'] in SpatialPlannerAgent.CROP_DB:
+            co_key = decision['companion_override']
+            if co_key != companion_key:
+                companion_key  = co_key
+                companion_data = SpatialPlannerAgent.CROP_DB[companion_key]
+                print(f"   [Memory] Companion overridden to '{companion_key}' by decision rules.")
+
+        print(f"   Interior Nodes: {len(all_nodes)}  Border Nodes: {len(border_nodes)}")
         print(f"━" * 60 + "\n")
 
-        # Insights logic
-        fixer_count = sum(1 for c in all_crops if c['nitrogen'] == 'Fixer')
-        nitrogen_balance = f"{fixer_count} nitrogen-fixing crop(s) reduce fertilizer needs" if fixer_count > 0 else "Add a legume to fix nitrogen"
-        
+        # ── 8. Insights ──────────────────────────────────────────────
+        all_crop_types = [main_data, companion_data]
+        fixer_count = sum(1 for c in all_crop_types if c['nitrogen'] == 'Fixer')
+        nitrogen_balance = (f"{fixer_count} nitrogen-fixing crop(s) present — synthetic fertilizer not required"
+                            if fixer_count > 0
+                            else "No nitrogen-fixing crop — add a legume or apply 40 kg/acre urea")
+
         avg_water_map = {'Low': 1, 'Medium': 2, 'High': 3}
-        total_water_score = sum(avg_water_map.get(c['water'], 2) for c in all_crops)
-        water_efficiency = round((1 - (total_water_score / (num_crops * 3))) * 30) if num_crops > 1 else 0
-        
-        companion_score = sum(1 for c in all_crops[1:] if c['name'] in SpatialPlannerAgent.COMPANION_MATRIX.get(main_crop_key, []))
-        
-        total_yield = 0.0
-        for i, c in enumerate(all_crops):
-            zone = zones[i]
-            zone_acres = (zone['w'] / w) * land_size_val
-            total_yield += c['yield_t_per_acre'] * zone_acres
+        total_water_score = sum(avg_water_map.get(c['water'], 2) for c in all_crop_types)
+        water_efficiency = round((1 - total_water_score/(len(all_crop_types)*3)) * 30)
+
+        comp_score_raw = companion_data.get('companion_score', 5)
+        land_eff = min(95, 70 + comp_score_raw * 2 + (8 if fixer_count > 0 else 0) + (5 if border_nodes else 0))
+        yield_boost = min(40, comp_score_raw * 3 + (8 if fixer_count > 0 else 0))
+
+        # Yield per zone
+        zone_yields = []
+        for i, crop in enumerate(crop_order):
+            if layout_mode == 'grid':
+                za = land_size_val * 0.5
+            else:
+                za = (zones[i]['w'] / w) * land_size_val if layout_mode in ('strip','auto') else (zones[i]['h'] / h) * land_size_val
+            zone_yields.append({'crop': crop['name'], 'acres': round(za,2),
+                                'yield_t': round(crop['yield_t_per_acre'] * za, 2)})
+        total_yield = sum(z['yield_t'] for z in zone_yields)
+        if border_nodes:
+            border_yield = round(SpatialPlannerAgent.CROP_DB['Marigold']['yield_t_per_acre'] * 0.05, 2)
+            zone_yields.append({'crop': 'Marigold (border)', 'acres': 0.05, 'yield_t': border_yield})
+            total_yield += border_yield
 
         warnings = []
-        if companion_data['name'] not in SpatialPlannerAgent.COMPANION_MATRIX.get(main_crop_key, []):
-             warnings.append(f"{companion_data['name']} is not a natural companion for {main_data['name']}.")
-        if any(c['water'] == 'High' for c in all_crops) and any(c['water'] == 'Low' for c in all_crops):
-             warnings.append("Mixed water needs — use drip irrigation to provide targeted watering per zone.")
+        if companion_data['name'] not in companions_raw:
+            warnings.append(f"⚠ {companion_data['name']} is not a confirmed companion for {main_data['name']}.")
+        if any(c['water'] == 'High' for c in all_crop_types) and any(c['water'] == 'Low' for c in all_crop_types):
+            warnings.append("⚠ Mixed water needs detected — use zone-specific drip irrigation.")
+        if main_data.get('shade') == 'Sensitive' and companion_data['height_m'] > main_data['height_m']:
+            warnings.append(f"⚠ {main_data['name']} is shade-sensitive; keep {companion_data['name']} on the north side.")
+
+        # ── 9. Layout Quality Score ──────────────────────────────────
+        score_companion = comp_score_raw * 5           # 0–50
+        score_nitrogen  = 20 if fixer_count > 0 else 0
+        score_water     = 15 if not any('water needs' in w for w in warnings) else 5
+        score_border    = 15 if border_nodes else 0
+        layout_score    = min(100, score_companion + score_nitrogen + score_water + score_border)
+
+        # ── 10. Limitations (static; always returned) ────────────────
+        limitations = [
+            "Sunlight direction is approximated (taller crop placed west) but shadow modeling is not performed.",
+            "Water source is not spatially mapped — all zones receive uniform irrigation assumptions.",
+            "Companion selection uses highest companion_score; no multi-objective optimization.",
+            "Farmer soil NPK data is fetched but not used to adjust crop-zone allocation.",
+            "Yield calculation is linear (yield_per_acre × area) without layout quality penalties.",
+            "No iterative user-feedback loop — layout is generated once per request.",
+            f"Layout mode '{pref}' applied; full spatial optimization across all modes is not computed.",
+        ]
+
+        # ── 11. Ollama-generated explanation ─────────────────────────
+        layout_facts = f"""
+Generate a structured, system-level explanation for a Spatial Twin farm layout.
+
+The explanation must NOT be conversational.
+Do NOT use phrases like “Hello”, “Let’s talk”, or informal storytelling.
+Use a clear, technical but simple tone as if the system is explaining its logic.
+
+---
+
+INPUT:
+
+* Main crop: {main_data['name']} (height: {main_data['height_m']}m, spacing: {main_data['spacing']}cm, water need: {main_data['water']})
+* Companion crop: {companion_data['name']} (height: {companion_data['height_m']}m, spacing: {companion_data['spacing']}cm, water need: {companion_data['water']})
+* Land size (acres): {land_size_val}
+* Layout type: {layout_mode} ({pref})
+* Layout score: {layout_score}/100
+* Total plants: {len(all_nodes)} interior, {len(border_nodes)} border
+* Land efficiency (%): {land_eff}
+* Water saving (%): {water_efficiency}
+* Yield boost (%): {yield_boost}
+* Estimated yield: {round(total_yield, 1)} tonnes
+* Zone allocation: {'; '.join([f"{z['crop']}: {z['acres']} acres" for z in zone_yields])}
+* Nitrogen fixers present: {'Yes' if fixer_count > 0 else 'No'}
+* Sunlight placement: {sunlight_note}
+* Warnings: {'; '.join(warnings) if warnings else 'None'}
+
+---
+
+INSTRUCTIONS:
+
+The explanation must be divided into the following sections exactly using these uppercase headers (do NOT use Markdown `#`, just the numbers and text):
+
+1. LAYOUT SUMMARY
+Describe the generated layout type, mention land size and crops used, and clearly state that layout is generated using rule-based spatial logic.
+
+2. CROP CHARACTERISTICS
+Explain both crops: height, spacing, and growth behavior. Keep it short and factual.
+
+3. ZONE & PLACEMENT LOGIC
+Explain how land is divided into zones, which crop occupies which area, and explain placement using: spacing rules, sunlight logic, and companion role.
+
+4. LAYOUT DECISION LOGIC
+Explain WHY this layout type was selected. Mention: spacing efficiency, compatibility, and land utilization.
+
+5. YIELD ANALYSIS
+Mention estimated yield. Explain reasons: spacing, crop combination, and land efficiency.
+
+6. SYSTEM SCORE EXPLANATION
+Explain layout score clearly. Break it into factors (Spacing efficiency, Crop compatibility, Nitrogen support, Water efficiency). Explain why score is high or low based on the INPUT.
+
+7. RESOURCE ANALYSIS
+Explain: land efficiency, water savings, and nitrogen balance.
+
+8. LIMITATIONS (IMPORTANT)
+Mention current system limitations clearly. Include:
+* No advanced sunlight direction modeling
+* Water placement is not fully spatial
+* Companion selection is rule-based, not fully optimized
+* Yield is estimated, not real-time measured
+
+9. RECOMMENDATIONS
+Suggest improvements based on the layout (e.g. Add nitrogen-fixing crops, Improve crop compatibility, Adjust spacing or layout, Improve irrigation planning).
+
+RULES:
+* Output must be structured with the 9 headings listed above.
+* Do NOT generate long paragraphs. Keep each section concise.
+* Do NOT generate random explanations.
+* Ensure explanation matches input data exactly.
+* Maintain deterministic reasoning.
+""".strip()
+
+        try:
+            analysis = _call_llm(
+                system_prompt="You are an expert precision agriculture spatial layout analyzer. Generate a clear, structured, system-level explanation for this digital farm twin.",
+                user_message=layout_facts,
+                label="SpatialTwin"
+            )
+        except Exception as _oe:
+            print(f"   ⚠️  LLM analysis fallback ({_oe}) — using deterministic analysis.")
+            analysis = (
+                f"**Digital Farm Twin Generated** — {len(all_nodes)} interior plants + {len(border_nodes)} border Marigolds "
+                f"across a **{layout_mode.capitalize()} layout**.\n\n"
+                f"**Primary crop:** {main_data['name']} ({main_data['spacing']}cm spacing, {main_data['height_m']}m tall) paired with "
+                f"**{companion_data['name']}** ({companion_data['spacing']}cm, {companion_data['height_m']}m).\n\n"
+                f"**Sunlight:** {sunlight_note}\n\n"
+                f"Land efficiency **{land_eff}%** · Yield boost **{yield_boost}%** · "
+                f"Layout quality score **{layout_score}/100**."
+            )
+
+        # ── 12. Real Commercial Field Population Calculations ────────
+        total_sq_m = round(land_size_val * 4046.86, 1)
+        field_dim_m = round(math.sqrt(total_sq_m), 1)
+
+        real_plant_counts = {}
+        for z in zone_yields:
+            crop_name = z['crop'].replace(' (border)', '')
+            crop_info = SpatialPlannerAgent.CROP_DB.get(crop_name, SpatialPlannerAgent.CROP_DB['Corn'])
+            sp_m = crop_info['spacing'] / 100.0
+            area_m2 = z['acres'] * 4046.86
+            plant_count = int(area_m2 / max(0.01, sp_m * sp_m * 0.866))
+            real_plant_counts[z['crop']] = {
+                'acres': z['acres'],
+                'plant_count': plant_count,
+                'spacing_cm': crop_info['spacing'],
+                'height_m': crop_info.get('height_m', 1.0)
+            }
+
+        total_real_plants = sum(v['plant_count'] for v in real_plant_counts.values())
+        visual_node_count = len(full_layout)
+        node_scale_factor = max(1, round(total_real_plants / max(1, visual_node_count)))
 
         insights = {
-            'total_plants': len(all_nodes),
-            'land_efficiency': min(95, 70 + companion_score * 5 + (10 if num_crops > 1 else 0)),
-            'water_saving_pct': water_efficiency,
-            'yield_boost_pct': min(40, companion_score * 6 + (8 if fixer_count > 0 else 0)),
+            'total_plants': len(full_layout),
+            'interior_plants': len(all_nodes),
+            'border_plants': len(border_nodes),
+            'total_real_plants': total_real_plants,
+            'real_plant_counts': real_plant_counts,
+            'total_sq_m': total_sq_m,
+            'field_dim_m': f"{field_dim_m}m × {field_dim_m}m",
+            'visual_scale_ratio': f"1 3D Node = ~{node_scale_factor:,} Real Field Plants",
+            'node_scale_factor': node_scale_factor,
+            'total_rows': int(field_dim_m / max(0.2, (main_data['spacing']/100.0))),
+            'total_row_km': round((field_dim_m * (field_dim_m / max(0.2, (main_data['spacing']/100.0)))) / 1000.0, 1),
+            'land_efficiency': land_eff,
+            'water_saving_pct': max(0, water_efficiency),
+            'yield_boost_pct': yield_boost,
+            'layout_score': layout_score,
             'nitrogen_balance': nitrogen_balance,
-            'best_combo': ", ".join(companions_list[:3]) if companions_list else "Marigold, Legumes",
+            'best_combo': ', '.join(companions_raw[:3]) if companions_raw else 'Marigold, Legumes',
+            'sunlight_note': sunlight_note,
+            'zone_yields': zone_yields,
+            'total_yield': round(total_yield, 2),
             'warnings': warnings,
             'action_items': [
-                f"Plant {main_data['name']} in the largest zone with {main_data['spacing']}cm spacing",
-                "Companion zones provide micro-climate benefits" if len(all_crops)>1 else "Add a companion crop",
-                "No synthetic nitrogen needed — legumes fix atmospheric N₂" if fixer_count > 0 else "Apply 40kg nitrogen fertilizer per acre",
-                f"Estimated total yield: {round(total_yield, 1)} tonnes from {land_size_val} acre(s)",
+                f"🌱 Field Population: ~{total_real_plants:,} real plants across {land_size_val} acre(s) ({field_dim_m}m × {field_dim_m}m plot)",
+                f"🌱 Plant {main_data['name']} with {main_data['spacing']}cm spacing (~{real_plant_counts.get(main_data['name'], {}).get('plant_count', 0):,} plants)",
+                f"🌿 Intercrop {companion_data['name']} with {companion_data['spacing']}cm spacing (~{real_plant_counts.get(companion_data['name'], {}).get('plant_count', 0):,} plants)",
+                f"🌼 Marigold border: ~{real_plant_counts.get('Marigold (border)', {}).get('plant_count', 0):,} protective border plants" if border_nodes else "Consider adding a Marigold border for pest control",
+                f"💧 Irrigation: {main_data['water']} for {main_data['name']}, {companion_data['water']} for {companion_data['name']}",
+                "🔬 " + nitrogen_balance,
+                f"📦 Estimated total yield: {round(total_yield,1)} tonnes from {land_size_val} acre(s)",
             ]
         }
 
-        analysis = (
-            f"**Digital Twin Generated** — {len(all_nodes)} planting nodes across {num_crops} crop zone(s).\n\n"
-            f"This layout uses **{main_data['name']}** as the primary crop, intercropped with **{companion_data['name']}**. "
-            f"Land efficiency is **{insights['land_efficiency']}%** with an estimated **{insights['yield_boost_pct']}%** yield boost over monoculture."
-        )
+        # ── Persist to spatial_twin_log ──────────────────────────────
+        try:
+            execute_fluxbase_sql(
+                "CREATE TABLE IF NOT EXISTS spatial_twin_log ("
+                "log_id SERIAL PRIMARY KEY, "
+                "farmer_id INTEGER, "
+                "main_crop VARCHAR(64), "
+                "companion_crop VARCHAR(64), "
+                "layout_mode VARCHAR(32), "
+                "land_size_acres FLOAT, "
+                "total_yield_t FLOAT, "
+                "layout_score INTEGER, "
+                "soil_impact VARCHAR(16), "
+                "warnings_json TEXT, "
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                ");"
+            )
+            import json as _json
+            _warnings_json = _json.dumps(decision.get('warnings', []))
+            execute_fluxbase_sql(
+                f"INSERT INTO spatial_twin_log "
+                f"(farmer_id, main_crop, companion_crop, layout_mode, land_size_acres, total_yield_t, layout_score, soil_impact, warnings_json) "
+                f"VALUES ({int(farmer_id)}, '{safe_str(main_data['name'])}', '{safe_str(companion_data['name'])}', "
+                f"'{safe_str(layout_mode)}', {land_size_val}, {round(total_yield, 2)}, {layout_score}, "
+                f"'{safe_str(decision.get('soil_impact','neutral'))}', '{safe_str(_warnings_json)}');"
+            )
+            print("   [Memory] spatial_twin_log row inserted ✓")
+        except Exception as _log_err:
+            print(f"   [Memory] spatial_twin_log insert skipped: {_log_err}")
 
         return {
-            "layout": all_nodes,
+            "layout": full_layout,
             "zones": zones,
             "insights": insights,
             "analysis": analysis,
             "main_crop": main_data['name'],
             "companion": companion_data['name'],
             "farmer_name": farmer_name,
-            "land_size": str(land_size_val)
+            "land_size": str(land_size_val),
+            "layout_mode": layout_mode,
+            "layout_score": layout_score,
+            "zone_yields": zone_yields,
+            "limitations": limitations,
+            "sunlight_note": sunlight_note,
+            # ── Memory keys ──
+            "memory_used":      True,
+            "prev_crop":        memory.get('prev_crop'),
+            "memory_log":       decision['memory_log'],
+            "warnings":         decision['warnings'],
+            "soil_impact":      decision['soil_impact'],
+            "override_crop":    decision.get('override_crop'),
+            "override_reason":  decision.get('override_reason'),
+            "requested_crop":   requested_crop_key,
         }
 
 
