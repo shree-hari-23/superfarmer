@@ -169,7 +169,7 @@ _session_memory: dict[str, list] = {}
 MAX_HISTORY = 20   # keep last 20 turns per farmer to avoid context overflow
 
 
-def hf_agent_chat(message: str, farmer_id=None) -> str:
+def hf_agent_chat(message: str, farmer_id=None, language="en-IN") -> str:
     """
     Main entry point called by OrchestratorAgent.
     Runs a full agentic loop:
@@ -233,12 +233,10 @@ def hf_agent_chat(message: str, farmer_id=None) -> str:
         return final
 
     except Exception as e:
-        # Graceful fallback to Gemini if Ollama is offline
+        # Graceful fallback to SuperFarmerChatAgent (powered by Fluxbase / GLM / Groq)
         err_msg = str(e)
-        if "connection" in err_msg.lower() or "refused" in err_msg.lower():
+        try:
             from agents.agents import SuperFarmerChatAgent
-            return (
-                "⚠️ Local AI (Ollama) is offline. Falling back to Gemini.\n\n"
-                + SuperFarmerChatAgent.chat(message, [], farmer_id=farmer_id)
-            )
-        return f"Agent error: {err_msg}"
+            return SuperFarmerChatAgent.chat(message, [], farmer_id=farmer_id, language=language)
+        except Exception as e_fallback:
+            return f"Chat error: {err_msg} | Fallback error: {e_fallback}"

@@ -286,16 +286,16 @@ def build_story():
     story.append(divider(C_GREEN_LIGHT, 1.2))
 
     features = [
-        ["Feature", "Description", "AI Model"],
+        ["Feature", "Description", "Functional AI Tier & Engine"],
         ["🔐 Auth", "Signup/Login with bcrypt hashing + session cookies. Welcome & login alert emails auto-sent.", "Werkzeug + Gmail SMTP"],
-        ["🌾 Crop Recommendation", "Analyses soil NPK, temperature, rainfall, water availability → top 3 crops with explanations, tips, expected yield.", "Ollama qwen2.5:7b → Rule-based fallback"],
-        ["📅 Crop Planner", "Full crop management plan: sowing schedule, irrigation, fertilizers, pest alerts, harvest timeline stored in Fluxbase.", "Groq LLaMA 3.1-8b → Fallback defaults"],
-        ["🔬 Disease Diagnosis", "Diagnoses diseases from text descriptions AND uploaded leaf photos. Returns treatment + Amazon/Flipkart product links.", "Gemini 2.5 Flash Vision → Groq → Claude"],
+        ["🌾 Crop Recommendation", "Analyses soil NPK, temperature, rainfall, water availability → top 3 crops with explanations, tips, expected yield.", "Structured-Output Tier (flux-pro / GLM-4-Air)"],
+        ["📅 Crop Planner", "Full crop management plan: sowing schedule, irrigation, fertilizers, pest alerts, harvest timeline stored in Fluxbase.", "Structured-Output Tier (flux-pro / GLM-4-Air)"],
+        ["🔬 Disease Diagnosis", "Diagnoses diseases from text descriptions AND uploaded leaf photos. Returns treatment + Amazon/Flipkart product links.", "Vision-Capable Tier (flux-omni Native Vision / flux-max)"],
         ["🌦️ Weather Analysis", "3-day hyper-local forecast via Tomorrow.io. Auto-geocodes locations. Provides actionable harvest/irrigation advice.", "Tomorrow.io + Nominatim OSM"],
-        ["🗺️ Spatial Planner", "Generates personalised 2D hexagonal farm layout with companion planting, zone division, yield estimation, crop rotation memory.", "Rule engine + Ollama qwen2.5:7b"],
+        ["🗺️ Spatial Planner", "Generates personalised 2D hexagonal farm layout with companion planting, zone division, yield estimation, crop rotation memory.", "Deep-Reasoning Tier (flux-ultra / GLM-4-Plus)"],
         ["📊 Yield Comparison", "Compares intercropping vs monoculture yield in tons/acre + ₹ income delta.", "Deterministic Rule Engine"],
-        ["💬 AI Chat", "Multilingual conversational agent (10+ Indian languages), agentic tool-calling, Fluxbase memory integration.", "Ollama qwen2.5:7b → Groq/Claude fallback"],
-        ["📄 Report Generator", "Comprehensive advisory report pulling all agent data from Fluxbase into one professional view.", "Fluxbase SQL Aggregation"],
+        ["💬 AI Chat", "Multilingual conversational agent (10+ Indian languages), agentic tool-calling, Fluxbase memory integration.", "Fast Chat-Tier Model (flux-flash <100ms / flux-turbo speed)"],
+        ["📄 Report Generator", "Comprehensive advisory report pulling all agent data from Fluxbase into one professional view.", "Deep-Reasoning Tier (flux-ultra / GLM-4-Plus) + SQL"],
         ["📧 Email Automation", "HTML welcome & login-alert emails sent asynchronously via Gmail SMTP.", "smtplib (async thread)"],
         ["🔌 MCP Server", "FastMCP stdio server exposes farmer profile as an AI tool for external agent pipelines.", "FastMCP + Fluxbase"],
     ]
@@ -445,39 +445,42 @@ def build_story():
         ["OrchestratorAgent", "Central Router", "Deterministic Python", "Routes all intents to correct agent. Zero business logic.", "—"],
         ["UserAuthAgent", "Auth & User Mgmt", "Werkzeug + Fluxbase", "Handles signup/login with bcrypt-hashed passwords in Fluxbase.", "signup, login"],
         ["IntakeAgent", "Farmer Onboarding", "Fluxbase SQL", "Persists farmer name, land, location, water availability, goals.", "intake"],
-        ["CropRecommendationAgent", "AI Crop Advisor", "Ollama qwen2.5:7b → Rule fallback", "Top-3 crop picks from 20+ Indian crops based on NPK + climate.", "recommendation"],
-        ["CropPlannerAgent", "Plan Generator", "Groq LLaMA 3.1-8b → Defaults", "Full sowing→harvest plan stored in crop_plans table.", "plan"],
-        ["DiseaseDiagnosisAgent", "Plant Pathologist", "Gemini 2.5 Flash Vision → Groq → Claude", "Text/image disease diagnosis + buy links (Amazon, Flipkart).", "diagnose"],
+        ["CropRecommendationAgent", "AI Crop Advisor", "Structured-Output Tier (flux-pro)", "Top-3 crop picks based on NPK + climate.", "recommendation"],
+        ["CropPlannerAgent", "Plan Generator", "Structured-Output Tier (flux-pro)", "Full sowing→harvest plan stored in crop_plans table.", "plan"],
+        ["DiseaseDiagnosisAgent", "Plant Pathologist", "Vision-Capable Tier (flux-omni / flux-max)", "Multimodal leaf photo diagnosis + treatment & buy links.", "diagnose"],
         ["WeatherAgent", "Weather Analyst", "Tomorrow.io + Nominatim OSM", "3-day forecast + actionable harvest/irrigation advice.", "weather"],
-        ["SpatialPlannerAgent", "Digital Farm Twin", "Rule engine + Ollama qwen2.5:7b", "Optimised 2D hexagonal field layout + companion planting.", "spatial_plan"],
+        ["SpatialPlannerAgent", "Digital Farm Twin", "Deep-Reasoning Tier (flux-ultra)", "Optimised 2D hexagonal field layout + companion planting.", "spatial_plan"],
         ["YieldComparisonAgent", "Yield Optimizer", "Deterministic Rules", "Intercropping vs monoculture: tons/acre + ₹ income delta.", "yield_comparison"],
-        ["SuperFarmerChatAgent", "Multilingual AI", "Ollama (agentic) → Groq/Claude fallback", "10+ Indian language chat with tool-calling & Fluxbase memory.", "chat"],
-        ["ReportAgent", "Report Builder", "Fluxbase SQL Aggregation", "Aggregates all data into one comprehensive advisory report.", "report"],
+        ["SuperFarmerChatAgent", "Multilingual AI", "Fast Chat-Tier (flux-flash / flux-turbo)", "10+ Indian language conversational advisor.", "chat"],
+        ["ReportAgent", "Report Builder", "Deep-Reasoning Tier (flux-ultra) + SQL", "Aggregates authentic farm data into structured advisory report.", "report"],
         ["EmailAgent", "Email Dispatcher", "Gmail SMTP (async thread)", "HTML welcome & login-alert emails sent in background threads.", "send_email"],
     ]
 
     story.append(colored_table(
-        ["Agent", "Role", "Model", "Responsibility", "Intent Key"],
+        ["Agent", "Role", "Functional AI Tier", "Responsibility", "Intent Key"],
         agent_rows,
-        col_widths=[4*cm, 2.8*cm, 3.8*cm, 4.2*cm, 1.6*cm],
+        col_widths=[4*cm, 2.8*cm, 4.2*cm, 3.8*cm, 1.6*cm],
         header_color=C_GREEN
     ))
 
     story.append(Spacer(1, 0.5*cm))
-    story.append(section_heading("LLM Fallback Chain", 2))
+    story.append(section_heading("Functional AI Tiers & Gateway Architecture", 2))
     story.append(para(
-        "The system employs a <b>3-tier LLM fallback chain</b> to guarantee maximum uptime:"
+        "SuperFarmer organizes models into four functional capability tiers, decoupling agent requirements from specific gateway model names:"
     ))
     fallback_data = [
-        ["Tier", "Model", "Use Case"],
-        ["1 (Primary)", "Ollama qwen2.5:7b (local)", "Crop recommendations, agentic chat, spatial explanation"],
-        ["2 (Cloud Primary)", "Groq LLaMA 3.1-8b-instant", "Crop planning, disease diagnosis (text-only)"],
-        ["3 (Vision)", "Gemini 2.5 Flash", "Leaf image diagnosis, spatial planning, multilingual chat"],
-        ["4 (Fallback)", "Anthropic Claude Haiku 4.5", "Emergency fallback if Groq & Gemini both fail"],
+        ["Functional Tier", "Gateway Model", "Real Upstream Model", "Provider", "Assigned Agents"],
+        ["Fast Chat-Tier", "flux-flash", "glm-4-flash (<100ms)", "Zhipu AI", "SuperFarmerChatAgent (Chat Advisor)"],
+        ["Raw Speed Tier", "flux-turbo", "llama-3.3-70b-versatile", "Groq (300+ tok/s)", "SuperFarmerChatAgent (Speed Fallback)"],
+        ["Structured-Output Tier", "flux-pro", "glm-4-air", "Zhipu AI", "CropRecommendationAgent & CropPlannerAgent"],
+        ["Vision-Capable Tier", "flux-omni", "gemini-2.0-flash Native Vision", "Google Gemini", "DiseaseDiagnosisAgent (Leaf Photo Vision)"],
+        ["Vision-Capable Tier", "flux-max", "gpt-4o-mini Vision", "OpenAI", "DiseaseDiagnosisAgent (Diagnostic Benchmark)"],
+        ["Deep-Reasoning Tier", "flux-ultra", "glm-4-plus", "Zhipu AI", "SpatialPlannerAgent & ReportAgent"],
+        ["Deep-Reasoning Tier", "flux-5.2", "glm-4-plus (technical alias)", "Zhipu AI", "Digital Farm Twin & Synthesis Alias"],
     ]
     story.append(colored_table(
         fallback_data[0], fallback_data[1:],
-        col_widths=[3.5*cm, 7*cm, 6*cm],
+        col_widths=[3.5*cm, 2.8*cm, 4.2*cm, 2.8*cm, 4.5*cm],
         header_color=C_AMBER
     ))
     story.append(PageBreak())

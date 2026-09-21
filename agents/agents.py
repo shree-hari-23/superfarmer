@@ -28,7 +28,7 @@ def _call_glm(system_prompt: str, user_message: str, history: list = None, model
     api_key = os.environ.get("GLM_API_KEY")
     if not api_key:
         raise ValueError("GLM_API_KEY missing from .env")
-    client = OpenAI(api_key=api_key, base_url="https://open.bigmodel.cn/api/paas/v4")
+    client = OpenAI(api_key=api_key, base_url="https://open.bigmodel.cn/api/paas/v4", timeout=12.0)
     messages = [{"role": "system", "content": system_prompt}]
     if history:
         for m in history:
@@ -43,7 +43,7 @@ def _call_glm(system_prompt: str, user_message: str, history: list = None, model
 
 # ── Secondary LLM: Groq llama-3.1-8b-instant ──────────────────────────────────
 def _call_groq(system_prompt: str, user_message: str, history: list = None) -> str:
-    """Secondary LLM: Groq llama-3.1-8b-instant."""
+    """Secondary LLM: Groq qwen/qwen3.8-27b."""
     api_key = os.environ.get("GROK_API_KEY")
     if not api_key:
         raise ValueError("GROK_API_KEY missing from .env")
@@ -55,7 +55,7 @@ def _call_groq(system_prompt: str, user_message: str, history: list = None) -> s
             messages.append({"role": role, "content": m.get("content", "")})
     messages.append({"role": "user", "content": user_message})
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="qwen/qwen3.8-27b",
         messages=messages,
     )
     return response.choices[0].message.content
@@ -100,9 +100,9 @@ def _call_llm(system_prompt: str, user_message: str, history: list = None,
         except Exception as e_glm:
             print(f"   ⚠️  [{label}] GLM failed: {e_glm}, falling back to Groq...")
 
-    # 2. Fallback to Groq LLaMA 3.1
+    # 2. Fallback to Groq qwen/qwen3.8-27b
     try:
-        print(f"   🤖 [{label}] Model : groq/llama-3.1-8b-instant")
+        print(f"   🤖 [{label}] Model : groq/qwen/qwen3.8-27b")
         t0 = time.time()
         result = _call_groq(system_prompt, user_message, history)
         print(f"   ✅ [{label}] Response in {round(time.time()-t0,2)}s")
@@ -680,7 +680,7 @@ Output EXACTLY this JSON structure:
                 t0 = time.time()
                 client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
                 response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model="qwen/qwen3.8-27b",
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
                 )
@@ -808,7 +808,7 @@ class DiseaseDiagnosisAgent:
                 client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
                 t0 = time.time()
                 response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model="qwen/qwen3.8-27b",
                     messages=[
                         {"role": "system", "content": DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM},
                         {"role": "user", "content": prompt}
@@ -2507,17 +2507,53 @@ GROUND REALITIES
         lines.append("═══════════════════════════════════════════\n")
         return "\n".join(lines)
 
-    @staticmethod
-    def chat(message, history, farmer_id=None):
-        # Build grounded system prompt with live farmer memory from Fluxbase
-        farmer_context = SuperFarmerChatAgent._build_farmer_context(farmer_id)
-        full_system_prompt = SuperFarmerChatAgent._BASE_PERSONA + "\n" + farmer_context
+    LANGUAGE_MAP = {
+        "hi-IN": {"name": "Hindi", "script": "हिन्दी (Devanagari)"},
+        "bn-IN": {"name": "Bengali", "script": "বাংলা (Bengali)"},
+        "te-IN": {"name": "Telugu", "script": "తెలుగు (Telugu)"},
+        "mr-IN": {"name": "Marathi", "script": "मराठी (Devanagari)"},
+        "ta-IN": {"name": "Tamil", "script": "தமிழ் (Tamil)"},
+        "gu-IN": {"name": "Gujarati", "script": "ગુજરાતી (Gujarati)"},
+        "kn-IN": {"name": "Kannada", "script": "ಕನ್ನಡ (Kannada)"},
+        "pa-IN": {"name": "Punjabi", "script": "ਪੰਜਾਬੀ (Gurmukhi)"},
+        "or-IN": {"name": "Odia", "script": "ଓଡ଼ିଆ (Odia)"},
+        "ml-IN": {"name": "Malayalam", "script": "മലയാളം (Malayalam)"},
+        "en-IN": {"name": "English", "script": "English (Latin)"},
+    }
 
-        # Call Gemini with fully-grounded context
-        return _call_gemini(
+    @staticmethod
+    def chat(message, history, farmer_id=None, language="en-IN"):
+        lang_info = SuperFarmerChatAgent.LANGUAGE_MAP.get(language, {})
+        target_name = lang_info.get("name", language or "English")
+        target_script = lang_info.get("script", language or "English")
+
+        if target_name.lower() != "english":
+            lang_directive = (
+                f"\n═══════════════════════════════════════════\n"
+                f"🚨 MANDATORY LANGUAGE DIRECTIVE (HIGHEST PRIORITY):\n"
+                f"The farmer has explicitly chosen: {target_name} ({target_script}).\n"
+                f"You MUST generate your ENTIRE response in {target_name} using {target_script} script.\n"
+                f"Translate all agricultural advice, recommendations, numbers, and headings into {target_name}.\n"
+                f"Even if the farmer asks in English, do NOT respond in English.\n"
+                f"═══════════════════════════════════════════\n"
+            )
+            user_msg = f"{message}\n\n[Mandatory: Write your entire response in {target_name} ({target_script})]"
+        else:
+            lang_directive = (
+                f"\n═══════════════════════════════════════════\n"
+                f"LANGUAGE: The farmer has chosen English. Reply in clear, simple English.\n"
+                f"═══════════════════════════════════════════\n"
+            )
+            user_msg = message
+
+        farmer_context = SuperFarmerChatAgent._build_farmer_context(farmer_id)
+        full_system_prompt = f"{lang_directive}\n{SuperFarmerChatAgent._BASE_PERSONA}\n{farmer_context}\n{lang_directive}"
+
+        return _call_llm(
             system_prompt=full_system_prompt,
-            user_message=message,
+            user_message=user_msg,
             history=history,
+            label="SuperFarmerChat"
         )
 
 class YieldComparisonAgent:
@@ -2644,8 +2680,12 @@ class OrchestratorAgent:
                 data.get('companion_crop', 'None')
             )
         elif intent == 'chat':
-            from agents.hf_agent import hf_agent_chat
-            return hf_agent_chat(data['message'], farmer_id=data.get('farmer_id'))
+            return SuperFarmerChatAgent.chat(
+                message=data['message'],
+                history=data.get('history', []),
+                farmer_id=data.get('farmer_id'),
+                language=data.get('language', 'en-IN')
+            )
         elif intent == 'diagnose':
             return DiseaseDiagnosisAgent.diagnose(**data)
         elif intent == 'report':

@@ -25,25 +25,29 @@
 
 SuperFarmer is a full-stack web application that acts as an AI-powered agricultural advisor for Indian farmers. It uses a **multi-agent orchestration** pattern where specialized AI agents handle distinct domains — weather, disease diagnosis, crop planning, spatial layout, yield comparison, and conversational Q&A.
 
-The backend is built on **FastAPI** and uses **Fluxbase** (cloud MySQL via REST API) as the database, replacing traditional local MySQL. All LLM calls go through **Google Gemini 2.5 Flash** with **Groq (LLaMA 3.3-70B)** as a secondary model for crop recommendations and planning.
+The backend is built on **FastAPI** and uses **Fluxbase** (cloud MySQL via REST API) as the database. All LLM inference is routed through functional capability tiers mapped to specialized models:
+- **Fast Chat-Tier Model**: **`flux-flash`** (`glm-4-flash` via Zhipu AI <100ms) with **`flux-turbo`** (`llama-3.3-70b-versatile` via Groq @ 300+ tok/s) for **Multilingual Conversational Advice**
+- **Structured-Output & Planning Tier**: **`flux-pro`** (`glm-4-air` via Zhipu AI) for text-only NPK analysis, **Crop Recommendation**, and **Crop Planning**
+- **Vision-Capable Pathology Tier**: **`flux-omni`** (`gemini-2.0-flash` / `gemini-2.5-flash` via Google Gemini — Native Vision) & **`flux-max`** (`gpt-4o-mini` via OpenAI) for **Plant Disease Diagnosis from leaf photos**
+- **Deep-Reasoning & Agronomic Synthesis Tier**: **`flux-ultra`** (`glm-4-plus` via Zhipu AI, with **`flux-5.2`** as technical alias) consistently driving the **Spatial Digital Twin** and **Field Advisory Reports**
 
 ---
 
 ## Features
 
-| Feature | Description |
-|---|---|
-| 🔐 **Auth** | Signup / Login with Werkzeug password hashing + session cookies. Welcome & login alert emails sent automatically. |
-| 🌾 **Crop Recommendation** | LLaMA 3.3-70B (via Groq) analyzes soil NPK, temperature, rainfall, and water availability to recommend top 3 crops. Falls back to a rule-based engine if API is unavailable. |
-| 📅 **Crop Planner** | Generates a full crop management plan (sowing, irrigation, fertilizers, pest alerts, harvest timeline) using Groq. |
-| 🤒 **Disease Diagnosis** | Gemini 2.5 Flash diagnoses plant diseases from text descriptions **and uploaded leaf images**. Returns treatment + direct purchase links (BigHaat, IFFCO, Amazon). |
-| 🌦️ **Weather Analysis** | 3-day hyper-local forecast via Tomorrow.io. Auto-geocodes locations via Nominatim. Gives actionable harvest/irrigation advice. |
-| 🗺️ **Spatial Planner (Digital Twin)** | Gemini generates a **personalized 2D hexagonal field layout** based on the farmer's soil, water, and location profile from the database. |
-| 📊 **Yield Comparison** | Rule-based engine compares optimized intercropping yield vs. normal monoculture yield in tons/acre with ₹ income delta. |
-| 💬 **AI Chat** | Multilingual conversational agent (10 Indian languages) powered by Gemini. Adapts tone to village-level vocabulary. |
-| 📄 **Report Generator** | Pulls farmer profile + latest crop plan from Fluxbase and generates a structured advisory report. |
-| 📧 **Email Automation** | Gmail SMTP sends welcome emails on signup and security alerts on login — asynchronously in background threads. |
-| 🔌 **MCP Server** | A FastMCP stdio server (`farmer_mcp_server.py`) exposes farmer profile data as a tool for AI agent pipelines. |
+| Feature | Description | Functional AI Tier & Engine |
+|---|---|---|
+| 🔐 **Auth** | Signup / Login with Werkzeug password hashing + session cookies. Welcome & login alert emails sent automatically. | Werkzeug + Gmail SMTP |
+| 🌾 **Crop Recommendation** | Analyzes soil NPK, temperature, rainfall, and water availability to recommend top 3 crops. | **Structured-Output Tier** (`flux-pro`: `glm-4-air`) |
+| 📅 **Crop Planner** | Generates a full crop management plan (sowing, irrigation, fertilizers, pest alerts, harvest timeline). | **Structured-Output Tier** (`flux-pro`: `glm-4-air`) |
+| 🤒 **Disease Diagnosis** | Diagnoses plant diseases from text descriptions AND uploaded leaf photos with direct treatment buy links. | **Vision-Capable Tier** (`flux-omni`: Google Gemini Native Vision / `flux-max`) |
+| 🌦️ **Weather Analysis** | 3-day hyper-local forecast via Tomorrow.io. Auto-geocodes locations via Nominatim. Actionable harvest/irrigation advice. | Tomorrow.io REST API + Nominatim |
+| 🗺️ **Spatial Planner (Digital Twin)** | Generates a personalized 2D hexagonal field layout with companion intercropping. | **Deep-Reasoning Tier** (`flux-ultra`: `glm-4-plus`) + Rule Engine |
+| 📊 **Yield Comparison** | Rule-based engine compares optimized intercropping yield vs. normal monoculture yield in tons/acre with ₹ income delta. | Deterministic Agricultural Engine |
+| 💬 **AI Chat** | Multilingual conversational advisor (10 Indian languages) with farm memory integration. | **Fast Chat-Tier Model** (`flux-flash` <100ms / `flux-turbo` @ 300+ tok/s) |
+| 📄 **Report Generator** | Pulls authentic farmer profile + crop plan + spatial twin from Fluxbase and generates a structured advisory report. | **Deep-Reasoning Tier** (`flux-ultra`: `glm-4-plus`) |
+| 📧 **Email Automation** | Gmail SMTP sends welcome emails on signup and security alerts on login asynchronously. | smtplib async thread |
+| 🔌 **MCP Server** | A FastMCP stdio server (`farmer_mcp_server.py`) exposes farmer profile data as a tool for AI agent pipelines. | FastMCP + Fluxbase |
 
 ---
 
@@ -57,20 +61,17 @@ FastAPI (app.py)
   │
   ├── OrchestratorAgent ──► routes intent to the right agent
   │
-  ├── UserAuthAgent        ──► Fluxbase (users table)
-  ├── IntakeAgent          ──► Fluxbase (farmer_profile table)
-  ├── CropRecommendationAgent ──► Groq LLaMA 3.3-70B → Fluxbase
-  ├── CropPlannerAgent     ──► Groq LLaMA 3.3-70B → Fluxbase
-  ├── DiseaseDiagnosisAgent──► Gemini 2.5 Flash (text + image)
+  ├── UserAuthAgent        ──► Fluxbase Cloud DB (users table)
+  ├── IntakeAgent          ──► Fluxbase Cloud DB (farmer_profile table)
+  ├── CropRecommendationAgent ──► Structured-Output Tier (flux-pro: glm-4-air)
+  ├── CropPlannerAgent     ──► Structured-Output Tier (flux-pro: glm-4-air)
+  ├── DiseaseDiagnosisAgent──► Vision-Capable Tier (flux-omni: Google Gemini Native Vision)
   ├── WeatherAgent         ──► Tomorrow.io REST API
-  ├── SpatialPlannerAgent  ──► Gemini 2.5 Flash (JSON layout)
-  ├── YieldComparisonAgent ──► Rule-based engine
-  ├── SuperFarmerChatAgent ──► Gemini 2.5 Flash (multilingual)
-  ├── ReportAgent          ──► Fluxbase (reads + writes)
+  ├── SpatialPlannerAgent  ──► Deep-Reasoning Tier (flux-ultra: glm-4-plus)
+  ├── YieldComparisonAgent ──► Deterministic Rule Engine
+  ├── SuperFarmerChatAgent ──► Fast Chat-Tier Model (flux-flash: glm-4-flash / flux-turbo)
+  ├── ReportAgent          ──► Deep-Reasoning Tier (flux-ultra: glm-4-plus)
   └── EmailAgent           ──► Gmail SMTP (async thread)
-
-Fluxbase Cloud DB (MySQL via REST API)
-  └── POST https://fluxbase.vercel.app/api/execute-sql
 ```
 
 ---
@@ -120,7 +121,6 @@ superfarmer/
 │   ├── recommendation.html
 │   ├── plan.html
 │   ├── disease.html
-│   ├── chat.html
 │   ├── weather.html
 │   ├── spatial_planner.html
 │   ├── yield_comparison.html
@@ -268,7 +268,6 @@ All agents live in `agents/agents.py` and are dispatched by `OrchestratorAgent.r
 | `GET/POST` | `/recommendation` | Crop recommendation form |
 | `GET/POST` | `/plan` | Crop plan generator |
 | `GET/POST` | `/disease` | Disease diagnosis (text + image upload) |
-| `GET/POST` | `/chat` | JSON API for AI chat |
 | `GET/POST` | `/weather` | Weather forecast |
 | `GET/POST` | `/spatial-planner` | Digital twin field layout (JSON API) |
 | `GET/POST` | `/yield-comparison` | Yield comparison report |

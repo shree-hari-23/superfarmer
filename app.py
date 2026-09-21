@@ -32,7 +32,6 @@ _ROUTE_MAP = {
     'recommendation':   '/recommendation',
     'plan':             '/plan',
     'disease':          '/disease',
-    'chat':             '/chat',
     'spatial_planner':  '/spatial-planner',
     'report':           '/report',
     'static':           '/static',
@@ -390,29 +389,6 @@ async def disease_post(
 
 
 
-# ── Chat (JSON API) ──────────────────────────────────────────────────────────
-
-@app.get('/chat', response_class=HTMLResponse)
-def chat_get(request: Request):
-    if not _logged_in(request):
-        return _redirect('login')
-    return _render(request, 'chat.html')
-
-
-@app.post('/chat')
-async def chat_post(request: Request):
-    if not _logged_in(request):
-        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
-
-    data = await request.json()
-    if not data or 'message' not in data:
-        return JSONResponse({'error': 'No message provided'}, status_code=400)
-
-    # Inject farmer_id from session so the agent can fetch real farmer memory
-    data['farmer_id'] = request.session.get('farmer_id')
-
-    reply = orchestrator.route_request('chat', data)
-    return JSONResponse({'reply': reply})
 
 
 
