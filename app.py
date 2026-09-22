@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import os
 import threading
 import re
+import json
 
 load_dotenv(override=True)
 
@@ -34,6 +35,7 @@ _ROUTE_MAP = {
     'disease':          '/disease',
     'spatial_planner':  '/spatial-planner',
     'report':           '/report',
+    'benchmarks':       '/benchmarks',
     'static':           '/static',
 }
 
@@ -283,7 +285,9 @@ def recommendation_get(request: Request):
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        return _redirect('intake')
+        from agents.agents import UserAuthAgent
+        fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
+        request.session['farmer_id'] = fid if fid else request.session['user_id']
         
     last_rec = request.session.get('last_rec')
     # Only pass recommendations through if it's a proper result dict (has crops_str key)
@@ -307,7 +311,9 @@ def recommendation_post(
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        return _redirect('intake')
+        from agents.agents import UserAuthAgent
+        fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
+        request.session['farmer_id'] = fid if fid else request.session['user_id']
 
     data = {
         'farmer_id': request.session['farmer_id'],
@@ -325,6 +331,31 @@ def recommendation_post(
     return _render(request, 'recommendation.html', recommendations=rec_plain)
 
 
+# ── AI Model Benchmarks & Accuracy Metrics ──────────────────────────────────
+
+@app.get('/benchmarks', response_class=HTMLResponse)
+def benchmarks_get(request: Request):
+    crop_cases = []
+    disease_cases = []
+    try:
+        crop_path = os.path.join(os.path.dirname(__file__), 'evaluation', 'test_data', 'crop_recommendation_testset.json')
+        if os.path.exists(crop_path):
+            with open(crop_path, 'r', encoding='utf-8') as f:
+                crop_cases = json.load(f).get('cases', [])
+    except Exception:
+        pass
+
+    try:
+        disease_path = os.path.join(os.path.dirname(__file__), 'evaluation', 'test_data', 'disease_diagnosis_testset.json')
+        if os.path.exists(disease_path):
+            with open(disease_path, 'r', encoding='utf-8') as f:
+                disease_cases = json.load(f).get('cases', [])
+    except Exception:
+        pass
+
+    return _render(request, 'benchmarks.html', crop_cases=crop_cases, disease_cases=disease_cases)
+
+
 # ── Plan ─────────────────────────────────────────────────────────────────────
 
 @app.get('/plan', response_class=HTMLResponse)
@@ -332,7 +363,9 @@ def plan_get(request: Request):
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        return _redirect('intake')
+        from agents.agents import UserAuthAgent
+        fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
+        request.session['farmer_id'] = fid if fid else request.session['user_id']
     return _render(request, 'plan.html')
 
 
@@ -344,7 +377,9 @@ def plan_post(
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        return _redirect('intake')
+        from agents.agents import UserAuthAgent
+        fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
+        request.session['farmer_id'] = fid if fid else request.session['user_id']
 
     data = {
         'farmer_id': request.session['farmer_id'],
@@ -513,4 +548,5 @@ async def send_report_email_post(request: Request):
 
 if __name__ == '__main__':
     import uvicorn
+    # Trigger reload with updated Flux models routing
     uvicorn.run('app:app', host='127.0.0.1', port=5000, reload=True)

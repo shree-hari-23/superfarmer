@@ -39,3 +39,8 @@ test.py
 
 # ML model cache
 ml/__pycache__/
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3

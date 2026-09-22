@@ -1,0 +1,25 @@
+{
+  "_readme": "Illustrative test cases for the TEXT-ONLY diagnosis path (Groq/Claude fallback). Cross-check expected_disease labels against a plant pathology reference or agriculture extension resource before quoting numbers publicly. For the IMAGE path (Gemini Vision), you'll need a separate labeled image folder -- see disease_image_eval_notes.md.",
+  "cases": [
+    {"case_id": "DD001", "crop": "Tomato", "symptom_text": "Brown concentric ring spots on older leaves, leaves turning yellow and falling off", "expected_disease": "Early Blight"},
+    {"case_id": "DD002", "crop": "Tomato", "symptom_text": "White powdery coating on leaf undersides, leaves curling upward", "expected_disease": "Powdery Mildew"},
+    {"case_id": "DD003", "crop": "Rice", "symptom_text": "Diamond-shaped grey lesions with brown borders on leaves", "expected_disease": "Rice Blast"},
+    {"case_id": "DD004", "crop": "Wheat", "symptom_text": "Orange-brown pustules on leaf surface that rub off as powder", "expected_disease": "Wheat Rust"},
+    {"case_id": "DD005", "crop": "Potato", "symptom_text": "Dark water-soaked patches on leaves spreading rapidly in humid weather", "expected_disease": "Late Blight"},
+    {"case_id": "DD006", "crop": "Cotton", "symptom_text": "Yellowing of leaf veins with leaf curling and stunted plant growth", "expected_disease": "Cotton Leaf Curl Virus"},
+    {"case_id": "DD007", "crop": "Sugarcane", "symptom_text": "Long red streaks on leaves turning into rotting stalks with alcohol smell", "expected_disease": "Red Rot"},
+    {"case_id": "DD008", "crop": "Onion", "symptom_text": "Purple-brown lesions on leaf tips spreading down the leaf", "expected_disease": "Purple Blotch"},
+    {"case_id": "DD009", "crop": "Groundnut", "symptom_text": "Small dark brown circular spots on leaves surrounded by yellow halo", "expected_disease": "Tikka Leaf Spot"},
+    {"case_id": "DD010", "crop": "Soybean", "symptom_text": "Small reddish-brown pustules on the underside of leaves", "expected_disease": "Soybean Rust"},
+    {"case_id": "DD011", "crop": "Chickpea", "symptom_text": "Wilting of entire plant starting from lower leaves, roots show black discoloration", "expected_disease": "Fusarium Wilt"},
+    {"case_id": "DD012", "crop": "Maize", "symptom_text": "Long cigar-shaped grey-green lesions on leaves", "expected_disease": "Northern Corn Leaf Blight"},
+    {"case_id": "DD013", "crop": "Mustard", "symptom_text": "White rust-like pustules on leaf undersides with yellow patches on top", "expected_disease": "White Rust"},
+    {"case_id": "DD014", "crop": "Sunflower", "symptom_text": "Grey mold growth on flower head in wet conditions, head rot", "expected_disease": "Head Rot (Sclerotinia)"},
+    {"case_id": "DD015", "crop": "Garlic", "symptom_text": "Yellow streaking on leaves, stunted bulb growth", "expected_disease": "Garlic Mosaic Virus"},
+    {"case_id": "DD016", "crop": "Tomato", "symptom_text": "Sunken dark lesions on fruit with concentric rings", "expected_disease": "Anthracnose"},
+    {"case_id": "DD017", "crop": "Rice", "symptom_text": "Yellowing and drying of leaf tips starting from margins, wavy lesion edges", "expected_disease": "Bacterial Leaf Blight"},
+    {"case_id": "DD018", "crop": "Potato", "symptom_text": "Small dark scab-like lesions on tuber skin", "expected_disease": "Common Scab"},
+    {"case_id": "DD019", "crop": "Cotton", "symptom_text": "Angular water-soaked lesions on leaves turning dark brown along veins", "expected_disease": "Bacterial Blight"},
+    {"case_id": "DD020", "crop": "Wheat", "symptom_text": "Black powdery masses replacing grain in the ear head", "expected_disease": "Loose Smut"}
+  ]
+}

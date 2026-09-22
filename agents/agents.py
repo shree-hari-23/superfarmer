@@ -22,9 +22,62 @@ def safe_print(*args, **kwargs):
         _original_print(*new_args, **kwargs)
 builtins.print = safe_print
 
-# ── Primary LLM: GLM (Zhipu AI glm-4-flash) ───────────────────────────────────
+import base64
+import json
+
+FLUXBASE_AI_BASE_URL = os.environ.get("FLUXBASE_AI_BASE_URL", "https://fluxbasedb.me/api/v1")
+
+# ── Primary LLM: Flux Models (User AI Platform via Fluxbase Gateway) ───────────
+def _call_flux(model: str, system_prompt: str, user_message: str, image_b64: str = None, history: list = None, timeout: float = 50.0) -> str:
+    """Primary LLM dispatcher for user's Flux models."""
+    api_key = os.environ.get("FLUXBASE_API_KEY")
+    if not api_key:
+        raise ValueError("FLUXBASE_API_KEY missing from environment")
+
+    url = f"{FLUXBASE_AI_BASE_URL.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        for m in history:
+            role = "user" if m.get("role") == "user" else "assistant"
+            messages.append({"role": role, "content": m.get("content", "")})
+
+    if image_b64:
+        messages.append({
+            "role": "user",
+            "content": [
+                {"type": "text", "text": user_message},
+                {"type": "image_url", "image_url": {"url": image_b64}}
+            ]
+        })
+    else:
+        messages.append({"role": "user", "content": user_message})
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": 0.2
+    }
+
+    resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Flux model {model} returned HTTP {resp.status_code}: {resp.text}")
+
+    data = resp.json()
+    choices = data.get("choices")
+    if not choices or not isinstance(choices, list):
+        raise RuntimeError(f"Flux model {model} unexpected response: {data}")
+
+    return choices[0]["message"]["content"]
+
+
+# ── Secondary LLMs (Fallbacks) ────────────────────────────────────────────────
 def _call_glm(system_prompt: str, user_message: str, history: list = None, model: str = "glm-4-flash") -> str:
-    """Primary LLM: Zhipu AI GLM (glm-4-flash / glm-4-plus)."""
+    """Fallback LLM: Zhipu AI GLM (glm-4-flash / glm-4-plus)."""
     api_key = os.environ.get("GLM_API_KEY")
     if not api_key:
         raise ValueError("GLM_API_KEY missing from .env")
@@ -41,9 +94,9 @@ def _call_glm(system_prompt: str, user_message: str, history: list = None, model
     )
     return response.choices[0].message.content
 
-# ── Secondary LLM: Groq llama-3.1-8b-instant ──────────────────────────────────
+
 def _call_groq(system_prompt: str, user_message: str, history: list = None) -> str:
-    """Secondary LLM: Groq qwen/qwen3.8-27b."""
+    """Fallback LLM: Groq qwen/qwen3.8-27b."""
     api_key = os.environ.get("GROK_API_KEY")
     if not api_key:
         raise ValueError("GROK_API_KEY missing from .env")
@@ -60,7 +113,7 @@ def _call_groq(system_prompt: str, user_message: str, history: list = None) -> s
     )
     return response.choices[0].message.content
 
-# ── Fallback LLM: Anthropic Claude Haiku ─────────────────────────────────────
+
 def _call_claude(system_prompt: str, user_message: str, history: list = None) -> str:
     """Fallback LLM: Anthropic claude-haiku-4-5."""
     try:
@@ -85,42 +138,72 @@ def _call_claude(system_prompt: str, user_message: str, history: list = None) ->
     )
     return response.content[0].text
 
-# ── Unified call: GLM primary → Groq secondary → Claude fallback ─────────────
+
+# ── Unified call: User Flux Model Primary → Fallbacks ─────────────────────────
 def _call_llm(system_prompt: str, user_message: str, history: list = None,
-              label: str = "LLM") -> str:
-    """Call GLM first, fallback to Groq, then Claude."""
-    # 1. Try GLM-4-Flash
+              label: str = "LLM", model: str = None) -> str:
+    """Call user's Flux model first, fallback to GLM/Groq/Claude."""
+    if not model:
+        if "crop" in label.lower() or "plan" in label.lower():
+            model = "flux-pro"
+        elif "spatial" in label.lower() or "twin" in label.lower() or "report" in label.lower():
+            model = "flux-ultra"
+        elif "disease" in label.lower() or "vision" in label.lower():
+            model = "flux-omni"
+        elif "chat" in label.lower():
+            model = "flux-flash"
+        else:
+            model = "flux-pro"
+
+    # 1. Primary: User's Flux model
+    if os.environ.get("FLUXBASE_API_KEY"):
+        for m in [model, "flux-turbo", "flux-flash"]:
+            try:
+                print(f"   🤖 [{label}] Model : {m} (Fluxbase AI Gateway)")
+                t0 = time.time()
+                result = _call_flux(m, system_prompt, user_message, history=history)
+                print(f"   ✅ [{label}] Response in {round(time.time()-t0, 2)}s")
+                return result
+            except Exception as e_flux:
+                print(f"   ⚠️  [{label}] {m} failed: {e_flux}")
+
+    # 2. Secondary fallback: GLM
     if os.environ.get("GLM_API_KEY"):
         try:
             print(f"   🤖 [{label}] Model : zhipuai/glm-4-flash")
             t0 = time.time()
             result = _call_glm(system_prompt, user_message, history)
-            print(f"   ✅ [{label}] Response in {round(time.time()-t0,2)}s")
+            print(f"   ✅ [{label}] Response in {round(time.time()-t0, 2)}s")
             return result
         except Exception as e_glm:
-            print(f"   ⚠️  [{label}] GLM failed: {e_glm}, falling back to Groq...")
+            print(f"   ⚠️  [{label}] GLM failed: {e_glm}")
 
-    # 2. Fallback to Groq qwen/qwen3.8-27b
-    try:
-        print(f"   🤖 [{label}] Model : groq/qwen/qwen3.8-27b")
-        t0 = time.time()
-        result = _call_groq(system_prompt, user_message, history)
-        print(f"   ✅ [{label}] Response in {round(time.time()-t0,2)}s")
-        return result
-    except Exception as e_groq:
-        print(f"   ⚠️  [{label}] Groq failed: {e_groq}")
-        print(f"   🔄 [{label}] Fallback : anthropic/claude-haiku-4-5")
+    # 3. Tertiary fallback: Groq
+    if os.environ.get("GROK_API_KEY"):
+        try:
+            print(f"   🤖 [{label}] Model : groq/qwen/qwen3.8-27b")
+            t0 = time.time()
+            result = _call_groq(system_prompt, user_message, history)
+            print(f"   ✅ [{label}] Response in {round(time.time()-t0, 2)}s")
+            return result
+        except Exception as e_groq:
+            print(f"   ⚠️  [{label}] Groq failed: {e_groq}")
+
+    # 4. Final fallback: Claude
+    if os.environ.get("ANTHROPIC_API_KEY"):
         try:
             t0 = time.time()
             result = _call_claude(system_prompt, user_message, history)
-            print(f"   ✅ [{label}] Claude response in {round(time.time()-t0,2)}s")
+            print(f"   ✅ [{label}] Claude response in {round(time.time()-t0, 2)}s")
             return result
         except Exception as e_claude:
-            return f"All models (GLM, Groq, Claude) failed.\nGroq: {e_groq}\nClaude: {e_claude}"
+            print(f"   ⚠️  [{label}] Claude failed: {e_claude}")
 
-# Keep _call_gemini as a thin alias so existing callers don't break
+    return "All AI models failed."
+
+
 def _call_gemini(system_prompt: str, user_message: str, history: list = None) -> str:
-    return _call_llm(system_prompt, user_message, history, label="LLM")
+    return _call_llm(system_prompt, user_message, history, label="LLM", model="flux-pro")
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -436,10 +519,10 @@ class CropRecommendationAgent:
         print("🌾 [CropRecommendation] Analysing soil parameters")
         print(f"   Soil     : {soil_type} | Water: {water_const}")
         print(f"   NPK      : N={n} P={p} K={k} | Temp={temp}°C | Rain={rain}mm")
-        print(f"   🤖 Engine  : Ollama qwen2.5:7b (AI-only)")
+        print(f"   🤖 Engine  : flux-pro (Structured-Output Tier via Fluxbase Gateway)")
         print("━" * 60)
 
-        crop_details = CropRecommendationAgent._ollama_recommend_and_explain(
+        crop_details = CropRecommendationAgent._flux_recommend_and_explain(
             soil_type, n, p, k, temp, rain, water_const
         )
 
@@ -449,15 +532,28 @@ class CropRecommendationAgent:
         print(f"   ✅ Recommended : {rec_str}")
         print("━" * 60 + "\n")
 
-        query = f"INSERT INTO crop_recommendations (farmer_id, recommended_crops) VALUES ({int(farmer_id)}, '{safe_str(rec_str)}');"
-        execute_fluxbase_sql(query)
         try:
+            # Verify farmer_id exists in farmer_profile; if not, create minimal profile
+            fid_int = int(farmer_id)
+            chk = execute_fluxbase_sql(f"SELECT farmer_id FROM farmer_profile WHERE farmer_id = {fid_int} LIMIT 1")
+            if not chk.get('rows'):
+                execute_fluxbase_sql(
+                    f"INSERT INTO farmer_profile (farmer_id, user_id, name, land_size, location, water_availability) "
+                    f"VALUES ({fid_int}, {fid_int}, 'Farmer {fid_int}', 1.0, 'India', 'Medium')"
+                )
+            query = f"INSERT INTO crop_recommendations (farmer_id, recommended_crops) VALUES ({fid_int}, '{safe_str(rec_str)}');"
+            execute_fluxbase_sql(query)
+        except Exception as _dbe:
+            print(f"   ⚠️  [CropRec] DB recommendation insert note: {_dbe}")
+
+        try:
+            fid_int = int(farmer_id)
             execute_fluxbase_sql(
                 f"INSERT INTO soil_records (farmer_id, soil_type, nitrogen, phosphorus, potassium, temperature) "
-                f"VALUES ({int(farmer_id)}, '{safe_str(soil_type)}', {float(n)}, {float(p)}, {float(k)}, {float(temp)});"
+                f"VALUES ({fid_int}, '{safe_str(soil_type)}', {float(n)}, {float(p)}, {float(k)}, {float(temp)});"
             )
         except Exception as _se:
-            print(f"   [CropRec] Soil record insert note: {_se}")
+            print(f"   ⚠️  [CropRec] Soil record insert note: {_se}")
 
         return {
             "crops_str": rec_str,
@@ -465,26 +561,16 @@ class CropRecommendationAgent:
             "crop_details": crop_details,
         }
 
-    # ── Ollama: recommend + explain in one shot ────────────────────────────
+    # ── flux-pro: recommend + explain in one shot ─────────────────────────
     @staticmethod
-    def _ollama_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const):
+    def _flux_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const):
         """
-        Ask Ollama qwen2.5:7b to choose the top-3 crops AND return full
+        Ask flux-pro (Structured-Output Tier) to choose the top-3 crops AND return full
         agronomic explanations for each, based purely on soil/climate data.
         Returns a list of 3 dicts.
         """
         prompt = f"""You are an expert Indian agronomist AI.
-
-Analyse the farmer's soil and climate data below and recommend the TOP 3 most suitable crops for Indian farming conditions.
-
-ALLOWED CROPS (You MUST ONLY pick from this list. Do NOT generate any crop outside this list):
-- Cereals: Corn, Maize, Wheat, Rice
-- Vegetables: Tomato, Potato, Onion, Garlic
-- Cash Crops: Sugarcane, Cotton, Sunflower, Mustard
-- Legumes: Soybean, Groundnut, Chickpea
-- Companion Crop: Marigold
-
-FARMER DATA:
+Analyze soil & climate parameters:
 - Soil Type     : {soil_type}
 - Nitrogen (N)  : {n} mg/kg
 - Phosphorus (P): {p} mg/kg
@@ -493,73 +579,92 @@ FARMER DATA:
 - Avg Rainfall  : {rain} mm
 - Water Supply  : {water_const}
 
-Return EXACTLY a JSON array of 3 objects (no more, no less) in this format:
+Recommend the TOP 3 most suitable crops from:
+Cotton, Soybean, Groundnut, Wheat, Rice, Sugarcane, Sunflower, Mustard, Chickpea, Maize, Onion, Garlic, Potato.
+
+Return ONLY a JSON array of 3 objects in this format:
 [
   {{
-    "crop": "<Crop Name from ALLOWED CROPS — title case>",
+    "crop": "Cotton",
     "rank": 1,
-    "suitability_score": <integer 70-99>,
-    "why_recommended": "<2-3 sentences explaining why this crop is ideal for the above soil/climate data.>",
-    "key_features": [
-      "<Feature 1 — specific to this crop and the data above>",
-      "<Feature 2>",
-      "<Feature 3>"
-    ],
-    "nutritional_importance": "<1-2 sentences on economic or nutritional value for Indian farmers.>",
-    "growing_tips": [
-      "<Practical tip 1>",
-      "<Practical tip 2>",
-      "<Practical tip 3>"
-    ],
-    "ideal_season": "<e.g. Kharif (June-Oct)>",
-    "expected_yield": "<e.g. 2-3 tonnes/acre>",
-    "water_need": "<Low | Medium | High>"
-  }},
-  {{ ... rank 2 ... }},
-  {{ ... rank 3 ... }}
+    "suitability_score": 95,
+    "why_recommended": "Thrives in deep {soil_type.lower()} soil with high moisture retention and {temp}°C heat.",
+    "key_features": ["Deep taproot system", "High market demand", "Drought tolerant"],
+    "nutritional_importance": "Primary commercial cash crop contributing to farmer income.",
+    "growing_tips": ["Ensure proper furrow drainage", "Maintain optimal row spacing", "Apply balanced NPK"],
+    "ideal_season": "Kharif (June-Oct)",
+    "expected_yield": "2-3 tonnes/acre",
+    "water_need": "{water_const}"
+  }}
 ]
-
-Rules:
-- Recommend crops ONLY from the ALLOWED CROPS list.
-- Base crop choice entirely on the soil/climate data provided.
-- suitability_score must reflect rank order (rank 1 highest).
-- Return ONLY valid JSON. No markdown fences, no extra text.
+Rules: Return ONLY valid JSON array of 3 objects. No extra text, no markdown fences.
 """.strip()
 
-        try:
-            import ollama as _ollama
-            import json
-            print("   🤖 [Ollama] Calling qwen2.5:7b for recommendations...")
-            t0 = time.time()
-            resp = _ollama.chat(
-                model="qwen2.5:7b",
-                messages=[{"role": "user", "content": prompt}],
-                options={"temperature": 0.2, "num_predict": 2500}
-            )
-            raw = resp.message.content.strip()
+        raw = None
+        for m in ["flux-pro", "flux-turbo", "flux-flash"]:
+            try:
+                print(f"   🤖 [CropAI] Calling {m} (Fluxbase Gateway)...")
+                t0 = time.time()
+                raw = _call_flux(
+                    model=m,
+                    system_prompt="You are an expert Indian agricultural scientist AI. Output valid JSON array only.",
+                    user_message=prompt,
+                    timeout=45.0
+                )
+                if raw:
+                    print(f"   ✅ [{m}] Crop recommendation generated in {round(time.time()-t0, 2)}s")
+                    break
+            except Exception as e_flux:
+                print(f"   ⚠️  [{m}] error: {e_flux}, trying next model...")
 
-            # Strip markdown fences if model adds them
-            if raw.startswith("```"):
-                raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                if raw.startswith("json"):
-                    raw = raw[4:].strip()
+        if not raw:
+            try:
+                raw = _call_llm(
+                    system_prompt="You are an expert Indian agricultural scientist AI. Output valid JSON array only.",
+                    user_message=prompt,
+                    label="CropRecFallback"
+                )
+            except Exception:
+                raw = None
 
-            details = json.loads(raw)
-            details = details[:3]
+        if raw:
+            try:
+                text = raw.strip()
+                if text.startswith("```json"):
+                    text = text.split("```json", 1)[1].rsplit("```", 1)[0].strip()
+                elif text.startswith("```"):
+                    text = text.split("```", 1)[1].rsplit("```", 1)[0].strip()
 
-            for idx, d in enumerate(details):
-                cname = d.get("crop", "").lower()
-                d["emoji"] = CropRecommendationAgent._CROP_EMOJI.get(cname, "🌱")
-                d.setdefault("rank", idx + 1)
+                m_json = re.search(r'\[\s*\{.*\}\s*\]', text, re.DOTALL)
+                if m_json:
+                    details = json.loads(m_json.group(0))
+                else:
+                    details = json.loads(text)
 
-            print(f"   ✅ Ollama recommendations ready in {round(time.time()-t0,2)}s")
-            return details
+                if isinstance(details, list) and len(details) >= 1:
+                    details = details[:3]
+                    for idx, d in enumerate(details):
+                        cname = d.get("crop", "").lower()
+                        d["emoji"] = CropRecommendationAgent._CROP_EMOJI.get(cname, "🌱")
+                        d.setdefault("rank", idx + 1)
+                        d.setdefault("suitability_score", 92 - idx * 7)
+                        d.setdefault("water_need", water_const)
+                        d.setdefault("ideal_season", "Kharif (June–Oct)")
+                        d.setdefault("expected_yield", "2-3 tonnes/acre")
+                        d.setdefault("key_features", ["High yield potential", "Matches soil fertility"])
+                        d.setdefault("growing_tips", ["Maintain proper soil drainage", "Apply balanced fertilizers"])
+                        d.setdefault("nutritional_importance", "High economic value in Indian agriculture.")
+                    return details
+            except Exception as e_parse:
+                print(f"   ⚠️  JSON parse error ({e_parse}) from output: {raw[:150]}")
 
-        except Exception as _oe:
-            print(f"   ⚠️  Ollama offline or parse error ({_oe}) — using rule-based fallback.")
-            return CropRecommendationAgent._rule_based_fallback(
-                soil_type, n, p, k, temp, rain, water_const
-            )
+        print("   ⚠️  All AI models failed, using deterministic agronomy fallback.")
+        return CropRecommendationAgent._rule_based_fallback(soil_type, n, p, k, temp, rain, water_const)
+
+    @staticmethod
+    def _ollama_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const):
+        """Backward-compatibility alias pointing to _flux_recommend_and_explain."""
+        return CropRecommendationAgent._flux_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const)
 
     # ── Rule-based fallback (Ollama offline) ──────────────────────────────
     @staticmethod
@@ -672,46 +777,63 @@ Output EXACTLY this JSON structure:
 }}"""
 
         try:
-            from dotenv import dotenv_values
-            env_vars = dotenv_values(".env")
-            api_key = env_vars.get("GROK_API_KEY") or os.environ.get("GROK_API_KEY")
-            if api_key:
-                print("   🤖 [Planner] Model : groq/llama-3.1-8b-instant")
-                t0 = time.time()
-                client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-                response = client.chat.completions.create(
-                    model="qwen/qwen3.8-27b",
-                    messages=[{"role": "user", "content": prompt}],
-                    response_format={"type": "json_object"}
-                )
-                print(f"   ✅ [Planner] Response in {round(time.time()-t0,2)}s")
-                import json
-                text = response.choices[0].message.content.strip()
-                if text.startswith("```json"):
-                    text = text.split("```json", 1)[1].rsplit("```", 1)[0].strip()
-                elif text.startswith("```"):
-                    text = text.split("```", 1)[1].rsplit("```", 1)[0].strip()
+            print("   🤖 [CropPlanner] Model : flux-pro (Structured-Output Tier via Fluxbase Gateway)")
+            t0 = time.time()
+            text = _call_flux(
+                model="flux-pro",
+                system_prompt="You are an expert Indian agricultural scientist AI. Output valid JSON only.",
+                user_message=prompt,
+                timeout=45.0
+            )
+            print(f"   ✅ [CropPlanner] Plan ready in {round(time.time()-t0, 2)}s")
+            if text.startswith("```json"):
+                text = text.split("```json", 1)[1].rsplit("```", 1)[0].strip()
+            elif text.startswith("```"):
+                text = text.split("```", 1)[1].rsplit("```", 1)[0].strip()
+            m_json = re.search(r'\{.*\}', text, re.DOTALL)
+            if m_json:
+                plan = json.loads(m_json.group(0))
+            else:
                 plan = json.loads(text)
-        except Exception as e:
-            print(f"[PlannerAgent] Groq error: {e}")
+        except Exception as e_flux:
+            print(f"   ⚠️  [CropPlanner] flux-pro error: {e_flux}, trying fallback...")
+            try:
+                text = _call_llm(
+                    system_prompt="You are an expert Indian agricultural scientist AI. Output valid JSON only.",
+                    user_message=prompt,
+                    label="CropPlannerFallback",
+                    model="flux-turbo"
+                )
+                m_json = re.search(r'\{.*\}', text, re.DOTALL)
+                if m_json:
+                    plan = json.loads(m_json.group(0))
+            except Exception as e_fb:
+                print(f"   ⚠️  [CropPlanner] Fallback error: {e_fb}")
 
         if not plan or not all(k in plan for k in ['sowing_schedule', 'irrigation_plan', 'fertilizer_schedule', 'pest_alerts', 'harvest_timeline']):
             plan = CropPlannerAgent._fallback_plan(crop_name)
 
-        query = f"""INSERT INTO crop_plans 
-                   (farmer_id, crop_name, sowing_schedule, irrigation_plan, 
-                    fertilizer_schedule, pest_alerts, harvest_timeline) 
-                   VALUES ({int(farmer_id)}, '{safe_str(clean_crop_name)}', '{safe_str(plan['sowing_schedule'])}', '{safe_str(plan['irrigation_plan'])}', 
-                   '{safe_str(plan['fertilizer_schedule'])}', '{safe_str(plan['pest_alerts'])}', '{safe_str(plan['harvest_timeline'])}');"""
-
-        execute_fluxbase_sql(query)
-
-        sel_query = f"SELECT plan_id FROM crop_plans WHERE farmer_id = {int(farmer_id)} ORDER BY plan_id DESC LIMIT 1"
-        sel_res = execute_fluxbase_sql(sel_query)
-        if sel_res.get('rows'):
-            plan['plan_id'] = sel_res['rows'][0]['plan_id']
-        else:
+        fid_int = int(farmer_id)
+        try:
+            chk = execute_fluxbase_sql(f"SELECT farmer_id FROM farmer_profile WHERE farmer_id = {fid_int} LIMIT 1")
+            if not chk.get('rows'):
+                execute_fluxbase_sql(
+                    f"INSERT INTO farmer_profile (farmer_id, user_id, name, land_size, location, water_availability) "
+                    f"VALUES ({fid_int}, {fid_int}, 'Farmer {fid_int}', 1.0, 'India', 'Medium')"
+                )
+            query = f"""INSERT INTO crop_plans 
+                       (farmer_id, crop_name, sowing_schedule, irrigation_plan, 
+                        fertilizer_schedule, pest_alerts, harvest_timeline) 
+                       VALUES ({fid_int}, '{safe_str(clean_crop_name)}', '{safe_str(plan['sowing_schedule'])}', '{safe_str(plan['irrigation_plan'])}', 
+                       '{safe_str(plan['fertilizer_schedule'])}', '{safe_str(plan['pest_alerts'])}', '{safe_str(plan['harvest_timeline'])}');"""
+            execute_fluxbase_sql(query)
+            sel_query = f"SELECT plan_id FROM crop_plans WHERE farmer_id = {fid_int} ORDER BY plan_id DESC LIMIT 1"
+            sel_res = execute_fluxbase_sql(sel_query)
+            plan['plan_id'] = sel_res['rows'][0]['plan_id'] if sel_res.get('rows') else None
+        except Exception as _pe:
+            print(f"   ⚠️  [CropPlanner] DB insert note: {_pe}")
             plan['plan_id'] = None
+
         return plan
 
     @staticmethod
@@ -766,69 +888,78 @@ class DiseaseDiagnosisAgent:
 
         raw_result = None
 
-        # ── PATH A: Image attached ────────────────────────────────────────────
+        # Prepare base64 image if attached
+        image_b64 = None
         if has_image:
+            try:
+                if hasattr(leaf_image, 'file'):
+                    leaf_image.file.seek(0)
+                    img_bytes = leaf_image.file.read()
+                elif hasattr(leaf_image, 'read'):
+                    img_bytes = leaf_image.read()
+                else:
+                    img_bytes = None
+
+                if img_bytes:
+                    b64_str = base64.b64encode(img_bytes).decode('utf-8')
+                    content_type = getattr(leaf_image, 'content_type', 'image/jpeg') or 'image/jpeg'
+                    image_b64 = f"data:{content_type};base64,{b64_str}"
+            except Exception as e_b64:
+                print(f"   ⚠️  Failed to encode image to base64: {e_b64}")
+
+        # ── Primary: User's Flux Models (flux-omni -> flux-max) ────────────────
+        for m in ["flux-omni", "flux-max"]:
+            try:
+                print(f"   🤖 [DiseaseAI] Model : {m} (Vision Pathology Tier via Fluxbase Gateway)")
+                t0 = time.time()
+                raw_result = _call_flux(
+                    model=m,
+                    system_prompt=DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM,
+                    user_message=prompt,
+                    image_b64=image_b64,
+                    timeout=30.0
+                )
+                print(f"   ✅ [{m}] Diagnosis ready in {round(time.time()-t0, 2)}s")
+                break
+            except Exception as e_flux:
+                print(f"   ⚠️  [{m}] error: {e_flux}, trying next model...")
+
+        # ── Fallback A: Gemini Vision (if image attached and flux failed) ─────
+        if raw_result is None and has_image:
             api_key = os.environ.get("GEMINI_API_KEY")
             if api_key:
                 try:
-                    print("   🤖 Model    : gemini-2.5-flash  [Vision]")
-                    print("   ⏳ Calling Gemini Vision API...")
+                    print("   🤖 Model    : gemini-2.5-flash  [Vision Fallback]")
                     t0 = time.time()
                     genai.configure(api_key=api_key)
                     gmodel = genai.GenerativeModel('gemini-2.5-flash', generation_config={"response_mime_type": "application/json"})
+                    if hasattr(leaf_image, 'file'):
+                        leaf_image.file.seek(0)
                     img = PIL.Image.open(leaf_image)
                     response = gmodel.generate_content([DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM + "\n\n" + prompt, img])
                     raw_result = response.text
-                    elapsed = round(time.time() - t0, 2)
-                    print(f"   ✅ Gemini Vision response in {elapsed}s")
+                    print(f"   ✅ Gemini Vision response in {round(time.time()-t0, 2)}s")
                 except Exception as e:
                     print(f"   ⚠️  Gemini Vision failed: {e}")
-            else:
-                print("   ❌ GEMINI_API_KEY missing")
 
-            if raw_result is None:
-                print("   🔄 Fallback : anthropic/claude-haiku-4-5  [text-based]")
-                try:
-                    t0 = time.time()
-                    raw_result = _call_claude(
-                        system_prompt=DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM,
-                        user_message=prompt + "\n(Image could not be analysed — use text description only.)",
-                    )
-                    elapsed = round(time.time() - t0, 2)
-                    print(f"   ✅ Claude response in {elapsed}s")
-                except Exception as e2:
-                    print(f"   ❌ Claude also failed: {e2}")
-
-        # ── PATH B: Text-only (or Vision failed fallback) ─────────────────────
+        # ── Fallback B: Groq / Claude text fallback ───────────────────────────
         if raw_result is None:
             try:
-                print("   🤖 [DiseaseAI] Model : groq/llama-3.1-8b-instant")
-                api_key = os.environ.get("GROK_API_KEY")
-                from openai import OpenAI
-                client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+                print("   🤖 [DiseaseAI] Fallback Model : groq/qwen/qwen3.8-27b")
                 t0 = time.time()
-                response = client.chat.completions.create(
-                    model="qwen/qwen3.8-27b",
-                    messages=[
-                        {"role": "system", "content": DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM},
-                        {"role": "user", "content": prompt}
-                    ],
-                    response_format={"type": "json_object"}
-                )
-                raw_result = response.choices[0].message.content
-                print(f"   ✅ [DiseaseAI] Response in {round(time.time()-t0,2)}s")
+                raw_result = _call_groq(DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM, prompt)
+                print(f"   ✅ [DiseaseAI] Groq response in {round(time.time()-t0, 2)}s")
             except Exception as e_groq:
-                print(f"   ⚠️  Groq failed: {e_groq}")
-                print("   🔄 Fallback : anthropic/claude-haiku-4-5")
+                print(f"   ⚠️  Groq failed: {e_groq}, falling back to Claude...")
                 try:
                     t0 = time.time()
                     raw_result = _call_claude(
                         system_prompt=DiseaseDiagnosisAgent._DIAGNOSIS_SYSTEM,
                         user_message=prompt,
                     )
-                    print(f"   ✅ Claude response in {round(time.time()-t0,2)}s")
+                    print(f"   ✅ Claude response in {round(time.time()-t0, 2)}s")
                 except Exception as e_claude:
-                     print(f"   ❌ Claude also failed: {e_claude}")
+                    print(f"   ❌ Claude also failed: {e_claude}")
 
         # Parse JSON
         if raw_result is None:
@@ -2277,7 +2408,7 @@ RULES:
         try:
             execute_fluxbase_sql(
                 "CREATE TABLE IF NOT EXISTS spatial_twin_log ("
-                "log_id SERIAL PRIMARY KEY, "
+                "log_id INT AUTO_INCREMENT PRIMARY KEY, "
                 "farmer_id INTEGER, "
                 "main_crop VARCHAR(64), "
                 "companion_crop VARCHAR(64), "

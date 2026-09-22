@@ -1,0 +1,3205 @@
+{
+  "_readme": "Benchmark test suite of 200 diverse Indian agro-climatic scenarios across 5 major soil types (Alluvial, Black, Red, Sandy, Laterite) with ICAR-calibrated ground truth crop portfolios.",
+  "cases": [
+    {
+      "case_id": "CR001",
+      "soil_type": "Black",
+      "n": 80,
+      "p": 40,
+      "k": 45,
+      "temperature": 27,
+      "rainfall": 800,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR002",
+      "soil_type": "Alluvial",
+      "n": 100,
+      "p": 50,
+      "k": 50,
+      "temperature": 25,
+      "rainfall": 1200,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR003",
+      "soil_type": "Red",
+      "n": 40,
+      "p": 20,
+      "k": 20,
+      "temperature": 22,
+      "rainfall": 600,
+      "water_availability": "Low",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR004",
+      "soil_type": "Sandy",
+      "n": 30,
+      "p": 15,
+      "k": 25,
+      "temperature": 30,
+      "rainfall": 300,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR005",
+      "soil_type": "Laterite",
+      "n": 60,
+      "p": 30,
+      "k": 40,
+      "temperature": 26,
+      "rainfall": 900,
+      "water_availability": "Medium",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR006",
+      "soil_type": "Black",
+      "n": 90,
+      "p": 45,
+      "k": 50,
+      "temperature": 24,
+      "rainfall": 1000,
+      "water_availability": "High",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR007",
+      "soil_type": "Alluvial",
+      "n": 70,
+      "p": 35,
+      "k": 35,
+      "temperature": 20,
+      "rainfall": 700,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR008",
+      "soil_type": "Red",
+      "n": 50,
+      "p": 25,
+      "k": 30,
+      "temperature": 28,
+      "rainfall": 500,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR009",
+      "soil_type": "Sandy",
+      "n": 45,
+      "p": 20,
+      "k": 20,
+      "temperature": 32,
+      "rainfall": 250,
+      "water_availability": "Low",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR010",
+      "soil_type": "Alluvial",
+      "n": 110,
+      "p": 55,
+      "k": 60,
+      "temperature": 23,
+      "rainfall": 1100,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR011",
+      "soil_type": "Black",
+      "n": 65,
+      "p": 30,
+      "k": 35,
+      "temperature": 25,
+      "rainfall": 650,
+      "water_availability": "Medium",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR012",
+      "soil_type": "Red",
+      "n": 55,
+      "p": 28,
+      "k": 30,
+      "temperature": 27,
+      "rainfall": 550,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR013",
+      "soil_type": "Laterite",
+      "n": 40,
+      "p": 20,
+      "k": 25,
+      "temperature": 29,
+      "rainfall": 1400,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR014",
+      "soil_type": "Alluvial",
+      "n": 85,
+      "p": 42,
+      "k": 45,
+      "temperature": 21,
+      "rainfall": 750,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR015",
+      "soil_type": "Sandy",
+      "n": 35,
+      "p": 18,
+      "k": 20,
+      "temperature": 31,
+      "rainfall": 200,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR016",
+      "soil_type": "Black",
+      "n": 75,
+      "p": 38,
+      "k": 40,
+      "temperature": 26,
+      "rainfall": 850,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR017",
+      "soil_type": "Alluvial",
+      "n": 95,
+      "p": 48,
+      "k": 50,
+      "temperature": 24,
+      "rainfall": 1300,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR018",
+      "soil_type": "Red",
+      "n": 42,
+      "p": 22,
+      "k": 24,
+      "temperature": 30,
+      "rainfall": 400,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR019",
+      "soil_type": "Laterite",
+      "n": 58,
+      "p": 29,
+      "k": 32,
+      "temperature": 25,
+      "rainfall": 950,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Corn",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR020",
+      "soil_type": "Alluvial",
+      "n": 105,
+      "p": 52,
+      "k": 55,
+      "temperature": 22,
+      "rainfall": 1150,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR021",
+      "soil_type": "Black",
+      "n": 60,
+      "p": 30,
+      "k": 32,
+      "temperature": 27,
+      "rainfall": 600,
+      "water_availability": "Medium",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR022",
+      "soil_type": "Sandy",
+      "n": 38,
+      "p": 19,
+      "k": 22,
+      "temperature": 33,
+      "rainfall": 220,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR023",
+      "soil_type": "Red",
+      "n": 48,
+      "p": 24,
+      "k": 26,
+      "temperature": 28,
+      "rainfall": 480,
+      "water_availability": "Low",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR024",
+      "soil_type": "Alluvial",
+      "n": 78,
+      "p": 39,
+      "k": 42,
+      "temperature": 20,
+      "rainfall": 680,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR025",
+      "soil_type": "Laterite",
+      "n": 44,
+      "p": 22,
+      "k": 26,
+      "temperature": 29,
+      "rainfall": 1350,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR026",
+      "soil_type": "Black",
+      "n": 82,
+      "p": 41,
+      "k": 44,
+      "temperature": 26,
+      "rainfall": 820,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR027",
+      "soil_type": "Sandy",
+      "n": 33,
+      "p": 17,
+      "k": 19,
+      "temperature": 34,
+      "rainfall": 180,
+      "water_availability": "Low",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR028",
+      "soil_type": "Red",
+      "n": 52,
+      "p": 26,
+      "k": 28,
+      "temperature": 27,
+      "rainfall": 520,
+      "water_availability": "Medium",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR029",
+      "soil_type": "Alluvial",
+      "n": 100,
+      "p": 50,
+      "k": 52,
+      "temperature": 23,
+      "rainfall": 1250,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR030",
+      "soil_type": "Black",
+      "n": 68,
+      "p": 34,
+      "k": 36,
+      "temperature": 25,
+      "rainfall": 700,
+      "water_availability": "Medium",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR031",
+      "soil_type": "Sandy",
+      "n": 33,
+      "p": 15,
+      "k": 29,
+      "temperature": 25,
+      "rainfall": 242,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR032",
+      "soil_type": "Alluvial",
+      "n": 98,
+      "p": 43,
+      "k": 71,
+      "temperature": 21,
+      "rainfall": 589,
+      "water_availability": "Medium",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR033",
+      "soil_type": "Sandy",
+      "n": 43,
+      "p": 15,
+      "k": 18,
+      "temperature": 21,
+      "rainfall": 305,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR034",
+      "soil_type": "Red",
+      "n": 79,
+      "p": 30,
+      "k": 40,
+      "temperature": 29,
+      "rainfall": 783,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR035",
+      "soil_type": "Black",
+      "n": 74,
+      "p": 38,
+      "k": 35,
+      "temperature": 29,
+      "rainfall": 831,
+      "water_availability": "High",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR036",
+      "soil_type": "Black",
+      "n": 112,
+      "p": 49,
+      "k": 51,
+      "temperature": 29,
+      "rainfall": 952,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR037",
+      "soil_type": "Red",
+      "n": 38,
+      "p": 23,
+      "k": 31,
+      "temperature": 27,
+      "rainfall": 511,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR038",
+      "soil_type": "Sandy",
+      "n": 31,
+      "p": 20,
+      "k": 19,
+      "temperature": 27,
+      "rainfall": 275,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR039",
+      "soil_type": "Sandy",
+      "n": 36,
+      "p": 26,
+      "k": 19,
+      "temperature": 20,
+      "rainfall": 419,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR040",
+      "soil_type": "Laterite",
+      "n": 59,
+      "p": 25,
+      "k": 41,
+      "temperature": 24,
+      "rainfall": 1393,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR041",
+      "soil_type": "Red",
+      "n": 43,
+      "p": 25,
+      "k": 31,
+      "temperature": 25,
+      "rainfall": 594,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR042",
+      "soil_type": "Black",
+      "n": 91,
+      "p": 43,
+      "k": 42,
+      "temperature": 27,
+      "rainfall": 836,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR043",
+      "soil_type": "Alluvial",
+      "n": 59,
+      "p": 28,
+      "k": 33,
+      "temperature": 21,
+      "rainfall": 575,
+      "water_availability": "Medium",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Wheat",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR044",
+      "soil_type": "Laterite",
+      "n": 51,
+      "p": 27,
+      "k": 41,
+      "temperature": 23,
+      "rainfall": 1362,
+      "water_availability": "High",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR045",
+      "soil_type": "Red",
+      "n": 43,
+      "p": 19,
+      "k": 26,
+      "temperature": 28,
+      "rainfall": 554,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR046",
+      "soil_type": "Red",
+      "n": 55,
+      "p": 25,
+      "k": 24,
+      "temperature": 27,
+      "rainfall": 535,
+      "water_availability": "Low",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR047",
+      "soil_type": "Laterite",
+      "n": 72,
+      "p": 33,
+      "k": 38,
+      "temperature": 29,
+      "rainfall": 1698,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR048",
+      "soil_type": "Sandy",
+      "n": 42,
+      "p": 20,
+      "k": 21,
+      "temperature": 22,
+      "rainfall": 380,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR049",
+      "soil_type": "Alluvial",
+      "n": 108,
+      "p": 53,
+      "k": 56,
+      "temperature": 24,
+      "rainfall": 1398,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR050",
+      "soil_type": "Sandy",
+      "n": 34,
+      "p": 22,
+      "k": 26,
+      "temperature": 31,
+      "rainfall": 319,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR051",
+      "soil_type": "Sandy",
+      "n": 28,
+      "p": 24,
+      "k": 29,
+      "temperature": 20,
+      "rainfall": 374,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR052",
+      "soil_type": "Laterite",
+      "n": 70,
+      "p": 29,
+      "k": 29,
+      "temperature": 25,
+      "rainfall": 1172,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR053",
+      "soil_type": "Red",
+      "n": 50,
+      "p": 33,
+      "k": 46,
+      "temperature": 24,
+      "rainfall": 679,
+      "water_availability": "Medium",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR054",
+      "soil_type": "Sandy",
+      "n": 39,
+      "p": 25,
+      "k": 26,
+      "temperature": 30,
+      "rainfall": 230,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR055",
+      "soil_type": "Black",
+      "n": 47,
+      "p": 30,
+      "k": 40,
+      "temperature": 28,
+      "rainfall": 650,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Cotton"
+      ]
+    },
+    {
+      "case_id": "CR056",
+      "soil_type": "Red",
+      "n": 55,
+      "p": 29,
+      "k": 39,
+      "temperature": 29,
+      "rainfall": 806,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR057",
+      "soil_type": "Black",
+      "n": 61,
+      "p": 37,
+      "k": 37,
+      "temperature": 23,
+      "rainfall": 998,
+      "water_availability": "Medium",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR058",
+      "soil_type": "Laterite",
+      "n": 67,
+      "p": 36,
+      "k": 30,
+      "temperature": 24,
+      "rainfall": 1287,
+      "water_availability": "High",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR059",
+      "soil_type": "Sandy",
+      "n": 33,
+      "p": 18,
+      "k": 26,
+      "temperature": 28,
+      "rainfall": 308,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR060",
+      "soil_type": "Sandy",
+      "n": 34,
+      "p": 25,
+      "k": 22,
+      "temperature": 25,
+      "rainfall": 371,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR061",
+      "soil_type": "Red",
+      "n": 66,
+      "p": 39,
+      "k": 33,
+      "temperature": 25,
+      "rainfall": 607,
+      "water_availability": "Medium",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR062",
+      "soil_type": "Black",
+      "n": 96,
+      "p": 52,
+      "k": 63,
+      "temperature": 27,
+      "rainfall": 903,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR063",
+      "soil_type": "Laterite",
+      "n": 62,
+      "p": 20,
+      "k": 27,
+      "temperature": 25,
+      "rainfall": 1332,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR064",
+      "soil_type": "Alluvial",
+      "n": 137,
+      "p": 57,
+      "k": 60,
+      "temperature": 29,
+      "rainfall": 1159,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR065",
+      "soil_type": "Laterite",
+      "n": 73,
+      "p": 34,
+      "k": 45,
+      "temperature": 25,
+      "rainfall": 1584,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR066",
+      "soil_type": "Black",
+      "n": 73,
+      "p": 38,
+      "k": 53,
+      "temperature": 30,
+      "rainfall": 808,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR067",
+      "soil_type": "Red",
+      "n": 73,
+      "p": 26,
+      "k": 33,
+      "temperature": 22,
+      "rainfall": 653,
+      "water_availability": "High",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR068",
+      "soil_type": "Laterite",
+      "n": 38,
+      "p": 21,
+      "k": 25,
+      "temperature": 26,
+      "rainfall": 1124,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR069",
+      "soil_type": "Alluvial",
+      "n": 88,
+      "p": 45,
+      "k": 58,
+      "temperature": 19,
+      "rainfall": 513,
+      "water_availability": "Medium",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR070",
+      "soil_type": "Red",
+      "n": 75,
+      "p": 28,
+      "k": 31,
+      "temperature": 22,
+      "rainfall": 798,
+      "water_availability": "Medium",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR071",
+      "soil_type": "Laterite",
+      "n": 57,
+      "p": 26,
+      "k": 34,
+      "temperature": 26,
+      "rainfall": 1196,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR072",
+      "soil_type": "Red",
+      "n": 36,
+      "p": 20,
+      "k": 32,
+      "temperature": 23,
+      "rainfall": 599,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR073",
+      "soil_type": "Laterite",
+      "n": 49,
+      "p": 22,
+      "k": 28,
+      "temperature": 30,
+      "rainfall": 1134,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR074",
+      "soil_type": "Alluvial",
+      "n": 81,
+      "p": 49,
+      "k": 56,
+      "temperature": 16,
+      "rainfall": 598,
+      "water_availability": "Medium",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR075",
+      "soil_type": "Laterite",
+      "n": 65,
+      "p": 25,
+      "k": 31,
+      "temperature": 28,
+      "rainfall": 1588,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR076",
+      "soil_type": "Alluvial",
+      "n": 122,
+      "p": 47,
+      "k": 50,
+      "temperature": 24,
+      "rainfall": 1404,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR077",
+      "soil_type": "Sandy",
+      "n": 42,
+      "p": 24,
+      "k": 23,
+      "temperature": 35,
+      "rainfall": 283,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR078",
+      "soil_type": "Sandy",
+      "n": 34,
+      "p": 22,
+      "k": 30,
+      "temperature": 31,
+      "rainfall": 344,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR079",
+      "soil_type": "Black",
+      "n": 46,
+      "p": 32,
+      "k": 39,
+      "temperature": 24,
+      "rainfall": 561,
+      "water_availability": "Medium",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR080",
+      "soil_type": "Red",
+      "n": 39,
+      "p": 28,
+      "k": 29,
+      "temperature": 30,
+      "rainfall": 580,
+      "water_availability": "Low",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR081",
+      "soil_type": "Alluvial",
+      "n": 79,
+      "p": 33,
+      "k": 34,
+      "temperature": 21,
+      "rainfall": 604,
+      "water_availability": "High",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR082",
+      "soil_type": "Alluvial",
+      "n": 86,
+      "p": 42,
+      "k": 57,
+      "temperature": 18,
+      "rainfall": 522,
+      "water_availability": "Medium",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR083",
+      "soil_type": "Red",
+      "n": 67,
+      "p": 34,
+      "k": 46,
+      "temperature": 22,
+      "rainfall": 720,
+      "water_availability": "High",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR084",
+      "soil_type": "Sandy",
+      "n": 38,
+      "p": 20,
+      "k": 28,
+      "temperature": 27,
+      "rainfall": 447,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR085",
+      "soil_type": "Laterite",
+      "n": 72,
+      "p": 27,
+      "k": 38,
+      "temperature": 26,
+      "rainfall": 1315,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR086",
+      "soil_type": "Black",
+      "n": 91,
+      "p": 43,
+      "k": 55,
+      "temperature": 29,
+      "rainfall": 931,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR087",
+      "soil_type": "Alluvial",
+      "n": 132,
+      "p": 58,
+      "k": 53,
+      "temperature": 22,
+      "rainfall": 1220,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR088",
+      "soil_type": "Sandy",
+      "n": 38,
+      "p": 17,
+      "k": 29,
+      "temperature": 28,
+      "rainfall": 321,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR089",
+      "soil_type": "Sandy",
+      "n": 28,
+      "p": 15,
+      "k": 19,
+      "temperature": 21,
+      "rainfall": 339,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR090",
+      "soil_type": "Black",
+      "n": 60,
+      "p": 30,
+      "k": 30,
+      "temperature": 27,
+      "rainfall": 682,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Cotton"
+      ]
+    },
+    {
+      "case_id": "CR091",
+      "soil_type": "Black",
+      "n": 76,
+      "p": 44,
+      "k": 48,
+      "temperature": 18,
+      "rainfall": 691,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR092",
+      "soil_type": "Sandy",
+      "n": 42,
+      "p": 28,
+      "k": 23,
+      "temperature": 31,
+      "rainfall": 419,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR093",
+      "soil_type": "Sandy",
+      "n": 36,
+      "p": 19,
+      "k": 33,
+      "temperature": 24,
+      "rainfall": 245,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR094",
+      "soil_type": "Alluvial",
+      "n": 70,
+      "p": 40,
+      "k": 45,
+      "temperature": 23,
+      "rainfall": 721,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR095",
+      "soil_type": "Black",
+      "n": 45,
+      "p": 34,
+      "k": 39,
+      "temperature": 20,
+      "rainfall": 597,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR096",
+      "soil_type": "Red",
+      "n": 62,
+      "p": 31,
+      "k": 42,
+      "temperature": 25,
+      "rainfall": 678,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR097",
+      "soil_type": "Black",
+      "n": 60,
+      "p": 36,
+      "k": 47,
+      "temperature": 25,
+      "rainfall": 892,
+      "water_availability": "Medium",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR098",
+      "soil_type": "Laterite",
+      "n": 58,
+      "p": 29,
+      "k": 38,
+      "temperature": 27,
+      "rainfall": 1154,
+      "water_availability": "High",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR099",
+      "soil_type": "Alluvial",
+      "n": 68,
+      "p": 38,
+      "k": 37,
+      "temperature": 21,
+      "rainfall": 617,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR100",
+      "soil_type": "Alluvial",
+      "n": 89,
+      "p": 48,
+      "k": 46,
+      "temperature": 26,
+      "rainfall": 923,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR101",
+      "soil_type": "Red",
+      "n": 53,
+      "p": 21,
+      "k": 28,
+      "temperature": 23,
+      "rainfall": 681,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR102",
+      "soil_type": "Alluvial",
+      "n": 81,
+      "p": 36,
+      "k": 43,
+      "temperature": 20,
+      "rainfall": 567,
+      "water_availability": "High",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR103",
+      "soil_type": "Sandy",
+      "n": 42,
+      "p": 26,
+      "k": 33,
+      "temperature": 23,
+      "rainfall": 276,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR104",
+      "soil_type": "Sandy",
+      "n": 48,
+      "p": 23,
+      "k": 32,
+      "temperature": 30,
+      "rainfall": 361,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR105",
+      "soil_type": "Black",
+      "n": 83,
+      "p": 47,
+      "k": 45,
+      "temperature": 29,
+      "rainfall": 803,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR106",
+      "soil_type": "Black",
+      "n": 74,
+      "p": 35,
+      "k": 41,
+      "temperature": 24,
+      "rainfall": 748,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR107",
+      "soil_type": "Red",
+      "n": 64,
+      "p": 39,
+      "k": 36,
+      "temperature": 29,
+      "rainfall": 753,
+      "water_availability": "Medium",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR108",
+      "soil_type": "Sandy",
+      "n": 37,
+      "p": 22,
+      "k": 30,
+      "temperature": 27,
+      "rainfall": 429,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR109",
+      "soil_type": "Sandy",
+      "n": 44,
+      "p": 21,
+      "k": 26,
+      "temperature": 28,
+      "rainfall": 226,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR110",
+      "soil_type": "Black",
+      "n": 75,
+      "p": 32,
+      "k": 49,
+      "temperature": 26,
+      "rainfall": 1044,
+      "water_availability": "Medium",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR111",
+      "soil_type": "Laterite",
+      "n": 64,
+      "p": 26,
+      "k": 31,
+      "temperature": 28,
+      "rainfall": 1549,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR112",
+      "soil_type": "Sandy",
+      "n": 30,
+      "p": 16,
+      "k": 30,
+      "temperature": 27,
+      "rainfall": 236,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR113",
+      "soil_type": "Laterite",
+      "n": 49,
+      "p": 18,
+      "k": 30,
+      "temperature": 26,
+      "rainfall": 912,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR114",
+      "soil_type": "Alluvial",
+      "n": 100,
+      "p": 54,
+      "k": 71,
+      "temperature": 20,
+      "rainfall": 593,
+      "water_availability": "High",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR115",
+      "soil_type": "Laterite",
+      "n": 64,
+      "p": 33,
+      "k": 41,
+      "temperature": 28,
+      "rainfall": 1208,
+      "water_availability": "High",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR116",
+      "soil_type": "Sandy",
+      "n": 42,
+      "p": 16,
+      "k": 29,
+      "temperature": 26,
+      "rainfall": 315,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR117",
+      "soil_type": "Laterite",
+      "n": 57,
+      "p": 34,
+      "k": 32,
+      "temperature": 27,
+      "rainfall": 1198,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR118",
+      "soil_type": "Black",
+      "n": 54,
+      "p": 23,
+      "k": 39,
+      "temperature": 23,
+      "rainfall": 560,
+      "water_availability": "Medium",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR119",
+      "soil_type": "Black",
+      "n": 115,
+      "p": 47,
+      "k": 49,
+      "temperature": 26,
+      "rainfall": 1018,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR120",
+      "soil_type": "Laterite",
+      "n": 46,
+      "p": 31,
+      "k": 27,
+      "temperature": 25,
+      "rainfall": 1724,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR121",
+      "soil_type": "Black",
+      "n": 129,
+      "p": 59,
+      "k": 58,
+      "temperature": 24,
+      "rainfall": 1005,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR122",
+      "soil_type": "Red",
+      "n": 53,
+      "p": 29,
+      "k": 20,
+      "temperature": 29,
+      "rainfall": 622,
+      "water_availability": "Low",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR123",
+      "soil_type": "Black",
+      "n": 51,
+      "p": 34,
+      "k": 34,
+      "temperature": 30,
+      "rainfall": 757,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Cotton"
+      ]
+    },
+    {
+      "case_id": "CR124",
+      "soil_type": "Red",
+      "n": 62,
+      "p": 32,
+      "k": 41,
+      "temperature": 26,
+      "rainfall": 607,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR125",
+      "soil_type": "Black",
+      "n": 120,
+      "p": 50,
+      "k": 59,
+      "temperature": 26,
+      "rainfall": 1218,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR126",
+      "soil_type": "Red",
+      "n": 53,
+      "p": 27,
+      "k": 20,
+      "temperature": 24,
+      "rainfall": 664,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR127",
+      "soil_type": "Alluvial",
+      "n": 89,
+      "p": 45,
+      "k": 51,
+      "temperature": 18,
+      "rainfall": 547,
+      "water_availability": "High",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR128",
+      "soil_type": "Black",
+      "n": 84,
+      "p": 45,
+      "k": 50,
+      "temperature": 31,
+      "rainfall": 771,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR129",
+      "soil_type": "Black",
+      "n": 42,
+      "p": 29,
+      "k": 28,
+      "temperature": 19,
+      "rainfall": 589,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR130",
+      "soil_type": "Sandy",
+      "n": 32,
+      "p": 25,
+      "k": 18,
+      "temperature": 21,
+      "rainfall": 243,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR131",
+      "soil_type": "Alluvial",
+      "n": 84,
+      "p": 34,
+      "k": 39,
+      "temperature": 18,
+      "rainfall": 671,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR132",
+      "soil_type": "Sandy",
+      "n": 36,
+      "p": 22,
+      "k": 29,
+      "temperature": 24,
+      "rainfall": 344,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR133",
+      "soil_type": "Sandy",
+      "n": 35,
+      "p": 28,
+      "k": 33,
+      "temperature": 24,
+      "rainfall": 279,
+      "water_availability": "Low",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR134",
+      "soil_type": "Sandy",
+      "n": 30,
+      "p": 19,
+      "k": 27,
+      "temperature": 26,
+      "rainfall": 351,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR135",
+      "soil_type": "Alluvial",
+      "n": 120,
+      "p": 53,
+      "k": 61,
+      "temperature": 31,
+      "rainfall": 1111,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR136",
+      "soil_type": "Black",
+      "n": 59,
+      "p": 28,
+      "k": 38,
+      "temperature": 26,
+      "rainfall": 667,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Cotton"
+      ]
+    },
+    {
+      "case_id": "CR137",
+      "soil_type": "Alluvial",
+      "n": 78,
+      "p": 45,
+      "k": 35,
+      "temperature": 20,
+      "rainfall": 642,
+      "water_availability": "High",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR138",
+      "soil_type": "Laterite",
+      "n": 46,
+      "p": 26,
+      "k": 26,
+      "temperature": 30,
+      "rainfall": 1834,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR139",
+      "soil_type": "Sandy",
+      "n": 49,
+      "p": 28,
+      "k": 27,
+      "temperature": 29,
+      "rainfall": 311,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR140",
+      "soil_type": "Black",
+      "n": 110,
+      "p": 47,
+      "k": 53,
+      "temperature": 31,
+      "rainfall": 1024,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR141",
+      "soil_type": "Sandy",
+      "n": 42,
+      "p": 20,
+      "k": 18,
+      "temperature": 27,
+      "rainfall": 333,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR142",
+      "soil_type": "Red",
+      "n": 61,
+      "p": 33,
+      "k": 36,
+      "temperature": 25,
+      "rainfall": 671,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR143",
+      "soil_type": "Sandy",
+      "n": 28,
+      "p": 22,
+      "k": 21,
+      "temperature": 20,
+      "rainfall": 261,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR144",
+      "soil_type": "Red",
+      "n": 72,
+      "p": 40,
+      "k": 35,
+      "temperature": 28,
+      "rainfall": 721,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR145",
+      "soil_type": "Red",
+      "n": 75,
+      "p": 25,
+      "k": 32,
+      "temperature": 26,
+      "rainfall": 606,
+      "water_availability": "High",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR146",
+      "soil_type": "Laterite",
+      "n": 49,
+      "p": 24,
+      "k": 34,
+      "temperature": 29,
+      "rainfall": 1677,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR147",
+      "soil_type": "Sandy",
+      "n": 44,
+      "p": 19,
+      "k": 24,
+      "temperature": 27,
+      "rainfall": 284,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR148",
+      "soil_type": "Laterite",
+      "n": 56,
+      "p": 24,
+      "k": 28,
+      "temperature": 27,
+      "rainfall": 1536,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR149",
+      "soil_type": "Laterite",
+      "n": 61,
+      "p": 30,
+      "k": 33,
+      "temperature": 29,
+      "rainfall": 1648,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR150",
+      "soil_type": "Black",
+      "n": 76,
+      "p": 50,
+      "k": 48,
+      "temperature": 29,
+      "rainfall": 725,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR151",
+      "soil_type": "Black",
+      "n": 72,
+      "p": 37,
+      "k": 37,
+      "temperature": 20,
+      "rainfall": 603,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR152",
+      "soil_type": "Black",
+      "n": 41,
+      "p": 22,
+      "k": 36,
+      "temperature": 23,
+      "rainfall": 678,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR153",
+      "soil_type": "Sandy",
+      "n": 45,
+      "p": 16,
+      "k": 18,
+      "temperature": 30,
+      "rainfall": 252,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR154",
+      "soil_type": "Red",
+      "n": 69,
+      "p": 33,
+      "k": 33,
+      "temperature": 23,
+      "rainfall": 664,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR155",
+      "soil_type": "Alluvial",
+      "n": 72,
+      "p": 47,
+      "k": 50,
+      "temperature": 22,
+      "rainfall": 727,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Groundnut"
+      ]
+    },
+    {
+      "case_id": "CR156",
+      "soil_type": "Alluvial",
+      "n": 100,
+      "p": 49,
+      "k": 52,
+      "temperature": 17,
+      "rainfall": 480,
+      "water_availability": "High",
+      "expected_top1": "Potato",
+      "expected_top3": [
+        "Potato",
+        "Mustard",
+        "Wheat"
+      ]
+    },
+    {
+      "case_id": "CR157",
+      "soil_type": "Sandy",
+      "n": 39,
+      "p": 28,
+      "k": 28,
+      "temperature": 28,
+      "rainfall": 315,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR158",
+      "soil_type": "Black",
+      "n": 83,
+      "p": 38,
+      "k": 39,
+      "temperature": 22,
+      "rainfall": 758,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR159",
+      "soil_type": "Sandy",
+      "n": 35,
+      "p": 28,
+      "k": 23,
+      "temperature": 25,
+      "rainfall": 267,
+      "water_availability": "Low",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR160",
+      "soil_type": "Alluvial",
+      "n": 52,
+      "p": 24,
+      "k": 27,
+      "temperature": 20,
+      "rainfall": 400,
+      "water_availability": "Medium",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Wheat",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR161",
+      "soil_type": "Red",
+      "n": 72,
+      "p": 40,
+      "k": 39,
+      "temperature": 22,
+      "rainfall": 609,
+      "water_availability": "High",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR162",
+      "soil_type": "Laterite",
+      "n": 51,
+      "p": 31,
+      "k": 37,
+      "temperature": 28,
+      "rainfall": 1372,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR163",
+      "soil_type": "Black",
+      "n": 65,
+      "p": 34,
+      "k": 38,
+      "temperature": 22,
+      "rainfall": 608,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ]
+    },
+    {
+      "case_id": "CR164",
+      "soil_type": "Sandy",
+      "n": 35,
+      "p": 24,
+      "k": 20,
+      "temperature": 23,
+      "rainfall": 236,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR165",
+      "soil_type": "Alluvial",
+      "n": 100,
+      "p": 54,
+      "k": 64,
+      "temperature": 29,
+      "rainfall": 1522,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR166",
+      "soil_type": "Red",
+      "n": 53,
+      "p": 39,
+      "k": 39,
+      "temperature": 28,
+      "rainfall": 791,
+      "water_availability": "High",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR167",
+      "soil_type": "Red",
+      "n": 77,
+      "p": 37,
+      "k": 39,
+      "temperature": 27,
+      "rainfall": 753,
+      "water_availability": "Medium",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR168",
+      "soil_type": "Red",
+      "n": 55,
+      "p": 31,
+      "k": 28,
+      "temperature": 25,
+      "rainfall": 473,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR169",
+      "soil_type": "Sandy",
+      "n": 35,
+      "p": 28,
+      "k": 28,
+      "temperature": 35,
+      "rainfall": 230,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR170",
+      "soil_type": "Red",
+      "n": 71,
+      "p": 38,
+      "k": 42,
+      "temperature": 25,
+      "rainfall": 646,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR171",
+      "soil_type": "Sandy",
+      "n": 45,
+      "p": 16,
+      "k": 25,
+      "temperature": 26,
+      "rainfall": 284,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR172",
+      "soil_type": "Black",
+      "n": 101,
+      "p": 50,
+      "k": 55,
+      "temperature": 30,
+      "rainfall": 1255,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR173",
+      "soil_type": "Black",
+      "n": 77,
+      "p": 44,
+      "k": 43,
+      "temperature": 18,
+      "rainfall": 716,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR174",
+      "soil_type": "Black",
+      "n": 111,
+      "p": 55,
+      "k": 48,
+      "temperature": 30,
+      "rainfall": 1163,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR175",
+      "soil_type": "Sandy",
+      "n": 52,
+      "p": 25,
+      "k": 33,
+      "temperature": 26,
+      "rainfall": 268,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Mustard",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR176",
+      "soil_type": "Sandy",
+      "n": 47,
+      "p": 26,
+      "k": 27,
+      "temperature": 22,
+      "rainfall": 252,
+      "water_availability": "Medium",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR177",
+      "soil_type": "Sandy",
+      "n": 32,
+      "p": 18,
+      "k": 25,
+      "temperature": 26,
+      "rainfall": 231,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR178",
+      "soil_type": "Sandy",
+      "n": 37,
+      "p": 26,
+      "k": 20,
+      "temperature": 25,
+      "rainfall": 321,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR179",
+      "soil_type": "Sandy",
+      "n": 41,
+      "p": 15,
+      "k": 21,
+      "temperature": 20,
+      "rainfall": 318,
+      "water_availability": "Low",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ]
+    },
+    {
+      "case_id": "CR180",
+      "soil_type": "Sandy",
+      "n": 34,
+      "p": 22,
+      "k": 29,
+      "temperature": 25,
+      "rainfall": 310,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR181",
+      "soil_type": "Red",
+      "n": 60,
+      "p": 29,
+      "k": 27,
+      "temperature": 32,
+      "rainfall": 591,
+      "water_availability": "Low",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR182",
+      "soil_type": "Red",
+      "n": 41,
+      "p": 27,
+      "k": 24,
+      "temperature": 24,
+      "rainfall": 570,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR183",
+      "soil_type": "Black",
+      "n": 127,
+      "p": 53,
+      "k": 45,
+      "temperature": 28,
+      "rainfall": 1271,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR184",
+      "soil_type": "Sandy",
+      "n": 48,
+      "p": 25,
+      "k": 25,
+      "temperature": 22,
+      "rainfall": 364,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR185",
+      "soil_type": "Black",
+      "n": 52,
+      "p": 30,
+      "k": 40,
+      "temperature": 28,
+      "rainfall": 746,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Cotton"
+      ]
+    },
+    {
+      "case_id": "CR186",
+      "soil_type": "Black",
+      "n": 107,
+      "p": 52,
+      "k": 63,
+      "temperature": 30,
+      "rainfall": 1019,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Cotton",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR187",
+      "soil_type": "Alluvial",
+      "n": 110,
+      "p": 60,
+      "k": 57,
+      "temperature": 27,
+      "rainfall": 1439,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR188",
+      "soil_type": "Red",
+      "n": 56,
+      "p": 30,
+      "k": 44,
+      "temperature": 27,
+      "rainfall": 684,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Groundnut",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR189",
+      "soil_type": "Red",
+      "n": 53,
+      "p": 39,
+      "k": 30,
+      "temperature": 24,
+      "rainfall": 654,
+      "water_availability": "Medium",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR190",
+      "soil_type": "Alluvial",
+      "n": 135,
+      "p": 58,
+      "k": 62,
+      "temperature": 31,
+      "rainfall": 1404,
+      "water_availability": "High",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR191",
+      "soil_type": "Sandy",
+      "n": 32,
+      "p": 20,
+      "k": 28,
+      "temperature": 29,
+      "rainfall": 277,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR192",
+      "soil_type": "Sandy",
+      "n": 45,
+      "p": 23,
+      "k": 18,
+      "temperature": 30,
+      "rainfall": 197,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR193",
+      "soil_type": "Sandy",
+      "n": 39,
+      "p": 18,
+      "k": 29,
+      "temperature": 22,
+      "rainfall": 291,
+      "water_availability": "Low",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR194",
+      "soil_type": "Laterite",
+      "n": 70,
+      "p": 35,
+      "k": 41,
+      "temperature": 23,
+      "rainfall": 1177,
+      "water_availability": "Medium",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Soybean",
+        "Sugarcane"
+      ]
+    },
+    {
+      "case_id": "CR195",
+      "soil_type": "Laterite",
+      "n": 51,
+      "p": 20,
+      "k": 24,
+      "temperature": 27,
+      "rainfall": 2115,
+      "water_availability": "High",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ]
+    },
+    {
+      "case_id": "CR196",
+      "soil_type": "Black",
+      "n": 76,
+      "p": 37,
+      "k": 41,
+      "temperature": 19,
+      "rainfall": 662,
+      "water_availability": "Medium",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Chickpea",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR197",
+      "soil_type": "Sandy",
+      "n": 35,
+      "p": 17,
+      "k": 20,
+      "temperature": 21,
+      "rainfall": 406,
+      "water_availability": "Low",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Sunflower"
+      ]
+    },
+    {
+      "case_id": "CR198",
+      "soil_type": "Sandy",
+      "n": 39,
+      "p": 23,
+      "k": 34,
+      "temperature": 31,
+      "rainfall": 236,
+      "water_availability": "Low",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ]
+    },
+    {
+      "case_id": "CR199",
+      "soil_type": "Red",
+      "n": 70,
+      "p": 33,
+      "k": 44,
+      "temperature": 26,
+      "rainfall": 720,
+      "water_availability": "Medium",
+      "expected_top1": "Tomato",
+      "expected_top3": [
+        "Tomato",
+        "Onion",
+        "Chickpea"
+      ]
+    },
+    {
+      "case_id": "CR200",
+      "soil_type": "Laterite",
+      "n": 49,
+      "p": 22,
+      "k": 32,
+      "temperature": 29,
+      "rainfall": 930,
+      "water_availability": "Medium",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Soybean",
+        "Maize"
+      ]
+    }
+  ]
+}

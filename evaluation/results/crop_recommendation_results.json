@@ -1,0 +1,604 @@
+{
+  "engine": "rules",
+  "summary": {
+    "total_cases": 30,
+    "top1_correct": 6,
+    "top1_accuracy_pct": 20.0,
+    "top3_correct": 17,
+    "top3_accuracy_pct": 56.7
+  },
+  "per_crop_breakdown": {
+    "Cotton": {
+      "total": 3,
+      "top1_correct": 3,
+      "top1_accuracy_pct": 100.0,
+      "top3_correct": 3,
+      "top3_accuracy_pct": 100.0
+    },
+    "Rice": {
+      "total": 4,
+      "top1_correct": 2,
+      "top1_accuracy_pct": 50.0,
+      "top3_correct": 2,
+      "top3_accuracy_pct": 50.0
+    },
+    "Groundnut": {
+      "total": 3,
+      "top1_correct": 1,
+      "top1_accuracy_pct": 33.3,
+      "top3_correct": 3,
+      "top3_accuracy_pct": 100.0
+    },
+    "Mustard": {
+      "total": 2,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 2,
+      "top3_accuracy_pct": 100.0
+    },
+    "Sugarcane": {
+      "total": 4,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 3,
+      "top3_accuracy_pct": 75.0
+    },
+    "Soybean": {
+      "total": 2,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 2,
+      "top3_accuracy_pct": 100.0
+    },
+    "Wheat": {
+      "total": 3,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 0,
+      "top3_accuracy_pct": 0.0
+    },
+    "Sunflower": {
+      "total": 3,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 1,
+      "top3_accuracy_pct": 33.3
+    },
+    "Onion": {
+      "total": 2,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 0,
+      "top3_accuracy_pct": 0.0
+    },
+    "Chickpea": {
+      "total": 2,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 1,
+      "top3_accuracy_pct": 50.0
+    },
+    "Garlic": {
+      "total": 1,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 0,
+      "top3_accuracy_pct": 0.0
+    },
+    "Maize": {
+      "total": 1,
+      "top1_correct": 0,
+      "top1_accuracy_pct": 0.0,
+      "top3_correct": 0,
+      "top3_accuracy_pct": 0.0
+    }
+  },
+  "detailed_results": [
+    {
+      "case_id": "CR001",
+      "soil_type": "Black",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Groundnut"
+      ],
+      "predicted": [
+        "Cotton",
+        "Wheat",
+        "Soybean"
+      ],
+      "top1_match": true,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR002",
+      "soil_type": "Alluvial",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "predicted": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": true,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR003",
+      "soil_type": "Red",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Chickpea",
+        "Mustard"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR004",
+      "soil_type": "Sandy",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Sunflower"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR005",
+      "soil_type": "Laterite",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ],
+      "predicted": [
+        "Groundnut",
+        "Finger Millet",
+        "Sorghum"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR006",
+      "soil_type": "Black",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Sugarcane"
+      ],
+      "predicted": [
+        "Cotton",
+        "Wheat",
+        "Soybean"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR007",
+      "soil_type": "Alluvial",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ],
+      "predicted": [
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR008",
+      "soil_type": "Red",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Mustard"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR009",
+      "soil_type": "Sandy",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR010",
+      "soil_type": "Alluvial",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ],
+      "predicted": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR011",
+      "soil_type": "Black",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Groundnut"
+      ],
+      "predicted": [
+        "Cotton",
+        "Wheat",
+        "Soybean"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR012",
+      "soil_type": "Red",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ],
+      "predicted": [
+        "Groundnut",
+        "Finger Millet",
+        "Sorghum"
+      ],
+      "top1_match": true,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR013",
+      "soil_type": "Laterite",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "predicted": [
+        "Groundnut",
+        "Finger Millet",
+        "Sorghum"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR014",
+      "soil_type": "Alluvial",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ],
+      "predicted": [
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR015",
+      "soil_type": "Sandy",
+      "expected_top1": "Garlic",
+      "expected_top3": [
+        "Garlic",
+        "Onion",
+        "Mustard"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR016",
+      "soil_type": "Black",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Sugarcane"
+      ],
+      "predicted": [
+        "Cotton",
+        "Wheat",
+        "Soybean"
+      ],
+      "top1_match": true,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR017",
+      "soil_type": "Alluvial",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "predicted": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": true,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR018",
+      "soil_type": "Red",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Mustard"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR019",
+      "soil_type": "Laterite",
+      "expected_top1": "Maize",
+      "expected_top3": [
+        "Maize",
+        "Corn",
+        "Sugarcane"
+      ],
+      "predicted": [
+        "Groundnut",
+        "Finger Millet",
+        "Sorghum"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR020",
+      "soil_type": "Alluvial",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ],
+      "predicted": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR021",
+      "soil_type": "Black",
+      "expected_top1": "Soybean",
+      "expected_top3": [
+        "Soybean",
+        "Cotton",
+        "Groundnut"
+      ],
+      "predicted": [
+        "Cotton",
+        "Soybean"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR022",
+      "soil_type": "Sandy",
+      "expected_top1": "Mustard",
+      "expected_top3": [
+        "Mustard",
+        "Chickpea",
+        "Onion"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR023",
+      "soil_type": "Red",
+      "expected_top1": "Groundnut",
+      "expected_top3": [
+        "Groundnut",
+        "Sunflower",
+        "Chickpea"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR024",
+      "soil_type": "Alluvial",
+      "expected_top1": "Wheat",
+      "expected_top3": [
+        "Wheat",
+        "Mustard",
+        "Chickpea"
+      ],
+      "predicted": [
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR025",
+      "soil_type": "Laterite",
+      "expected_top1": "Rice",
+      "expected_top3": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "predicted": [
+        "Groundnut",
+        "Finger Millet",
+        "Sorghum"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR026",
+      "soil_type": "Black",
+      "expected_top1": "Cotton",
+      "expected_top3": [
+        "Cotton",
+        "Soybean",
+        "Sugarcane"
+      ],
+      "predicted": [
+        "Cotton",
+        "Wheat",
+        "Soybean"
+      ],
+      "top1_match": true,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR027",
+      "soil_type": "Sandy",
+      "expected_top1": "Onion",
+      "expected_top3": [
+        "Onion",
+        "Garlic",
+        "Mustard"
+      ],
+      "predicted": [
+        "Pearl Millet",
+        "Chickpea",
+        "Moth Beans"
+      ],
+      "top1_match": false,
+      "top3_match": false
+    },
+    {
+      "case_id": "CR028",
+      "soil_type": "Red",
+      "expected_top1": "Sunflower",
+      "expected_top3": [
+        "Sunflower",
+        "Groundnut",
+        "Chickpea"
+      ],
+      "predicted": [
+        "Groundnut",
+        "Finger Millet",
+        "Sorghum"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR029",
+      "soil_type": "Alluvial",
+      "expected_top1": "Sugarcane",
+      "expected_top3": [
+        "Sugarcane",
+        "Rice",
+        "Maize"
+      ],
+      "predicted": [
+        "Rice",
+        "Sugarcane",
+        "Maize"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    },
+    {
+      "case_id": "CR030",
+      "soil_type": "Black",
+      "expected_top1": "Chickpea",
+      "expected_top3": [
+        "Chickpea",
+        "Mustard",
+        "Soybean"
+      ],
+      "predicted": [
+        "Cotton",
+        "Wheat",
+        "Soybean"
+      ],
+      "top1_match": false,
+      "top3_match": true
+    }
+  ]
+}

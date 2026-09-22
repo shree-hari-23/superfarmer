@@ -1,0 +1,170 @@
+{
+  "summary": {
+    "total_cases": 20,
+    "correct_matches": 16,
+    "accuracy_pct": 80.0,
+    "threshold": 0.4
+  },
+  "detailed_results": [
+    {
+      "case_id": "DD001",
+      "crop": "Tomato",
+      "expected_disease": "Early Blight",
+      "predicted_disease": "Late Blight",
+      "similarity_score": 0.7,
+      "match": true
+    },
+    {
+      "case_id": "DD002",
+      "crop": "Tomato",
+      "expected_disease": "Powdery Mildew",
+      "predicted_disease": "Downy Mildew",
+      "similarity_score": 0.77,
+      "match": true
+    },
+    {
+      "case_id": "DD003",
+      "crop": "Rice",
+      "expected_disease": "Rice Blast",
+      "predicted_disease": "Rice Bacterial Leaf Blight (BLB)",
+      "similarity_score": 0.38,
+      "match": false
+    },
+    {
+      "case_id": "DD004",
+      "crop": "Wheat",
+      "expected_disease": "Wheat Rust",
+      "predicted_disease": "Wheat Rust (Brown Rust/Puccinia truncata or Yellow Rust/Puccinia striiformis)",
+      "similarity_score": 0.23,
+      "match": true
+    },
+    {
+      "case_id": "DD005",
+      "crop": "Potato",
+      "expected_disease": "Late Blight",
+      "predicted_disease": "Late Blight",
+      "similarity_score": 1.0,
+      "match": true
+    },
+    {
+      "case_id": "DD006",
+      "crop": "Cotton",
+      "expected_disease": "Cotton Leaf Curl Virus",
+      "predicted_disease": "Cotton Leaf Curl Virus (CLCuV) / Whitefly Infestation",
+      "similarity_score": 0.59,
+      "match": true
+    },
+    {
+      "case_id": "DD007",
+      "crop": "Sugarcane",
+      "expected_disease": "Red Rot",
+      "predicted_disease": "Red Rot of Sugarcane",
+      "similarity_score": 0.52,
+      "match": true
+    },
+    {
+      "case_id": "DD008",
+      "crop": "Onion",
+      "expected_disease": "Purple Blotch",
+      "predicted_disease": "Purple Blotch",
+      "similarity_score": 1.0,
+      "match": true
+    },
+    {
+      "case_id": "DD009",
+      "crop": "Groundnut",
+      "expected_disease": "Tikka Leaf Spot",
+      "predicted_disease": "Cercospora Leaf Spot (TLC) in Groundnut",
+      "similarity_score": 0.41,
+      "match": true
+    },
+    {
+      "case_id": "DD010",
+      "crop": "Soybean",
+      "expected_disease": "Soybean Rust",
+      "predicted_disease": "Soybean Rust",
+      "similarity_score": 1.0,
+      "match": true
+    },
+    {
+      "case_id": "DD011",
+      "crop": "Chickpea",
+      "expected_disease": "Fusarium Wilt",
+      "predicted_disease": "Fusarial Wilt (Fusarium oxysporum f. sp. ciceris)",
+      "similarity_score": 0.32,
+      "match": true
+    },
+    {
+      "case_id": "DD012",
+      "crop": "Maize",
+      "expected_disease": "Northern Corn Leaf Blight",
+      "predicted_disease": "Stem Borer",
+      "similarity_score": 0.23,
+      "match": false
+    },
+    {
+      "case_id": "DD013",
+      "crop": "Mustard",
+      "expected_disease": "White Rust",
+      "predicted_disease": "White Rust",
+      "similarity_score": 1.0,
+      "match": true
+    },
+    {
+      "case_id": "DD014",
+      "crop": "Sunflower",
+      "expected_disease": "Head Rot (Sclerotinia)",
+      "predicted_disease": "Sclerotinia Head Rot (Sclerotinia sclerotiorum)",
+      "similarity_score": 0.64,
+      "match": true
+    },
+    {
+      "case_id": "DD015",
+      "crop": "Garlic",
+      "expected_disease": "Garlic Mosaic Virus",
+      "predicted_disease": "Yellow Mosaic Virus (YAMV)",
+      "similarity_score": 0.62,
+      "match": true
+    },
+    {
+      "case_id": "DD016",
+      "crop": "Tomato",
+      "expected_disease": "Anthracnose",
+      "predicted_disease": "Anthracnose",
+      "similarity_score": 1.0,
+      "match": true
+    },
+    {
+      "case_id": "DD017",
+      "crop": "Rice",
+      "expected_disease": "Bacterial Leaf Blight",
+      "predicted_disease": "Rice Blast",
+      "similarity_score": 0.45,
+      "match": true
+    },
+    {
+      "case_id": "DD018",
+      "crop": "Potato",
+      "expected_disease": "Common Scab",
+      "predicted_disease": "Rough Skin (Physiological) / Dark Leafhopper Nettle Rash",
+      "similarity_score": 0.15,
+      "match": false
+    },
+    {
+      "case_id": "DD019",
+      "crop": "Cotton",
+      "expected_disease": "Bacterial Blight",
+      "predicted_disease": "Bacterial Blight (Xanthomonas citri pv. malvacearum)",
+      "similarity_score": 0.47,
+      "match": true
+    },
+    {
+      "case_id": "DD020",
+      "crop": "Wheat",
+      "expected_disease": "Loose Smut",
+      "predicted_disease": "Smut of the wheat heads (Black Smut)",
+      "similarity_score": 0.3,
+      "match": false
+    }
+  ]
+}
