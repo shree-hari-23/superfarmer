@@ -1,0 +1,20 @@
+services:
+  superfarmer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: superfarmer-app
+    restart: unless-stopped
+    ports:
+      - "80:5000"      # Binds EC2 standard HTTP port 80 to container port 5000
+      - "5000:5000"    # Also accessible on port 5000 directly
+    env_file:
+      - .env
+    environment:
+      - PORT=5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

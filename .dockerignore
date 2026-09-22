@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Virtual environment
+.venv
+venv
+env
+
+# Python cache
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+
+# Local environment secrets (mount or pass at runtime in EC2)
+.env
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Large document binaries & scratch files
+*.pdf
+*.docx
+*.txt
+!requirements.txt
+query
+test_spatial.json
+test.py
+.gemini/
+
+# IDE files
+.vscode
+.idea
