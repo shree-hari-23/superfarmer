@@ -24,6 +24,12 @@ builtins.print = safe_print
 
 import base64
 import json
+from urllib.parse import quote_plus
+from werkzeug.security import generate_password_hash, check_password_hash
+try:
+    import bcrypt
+except ImportError:
+    bcrypt = None
 
 FLUXBASE_AI_BASE_URL = os.environ.get("FLUXBASE_AI_BASE_URL", "https://fluxbasedb.me/api/v1")
 
@@ -200,10 +206,6 @@ def _call_llm(system_prompt: str, user_message: str, history: list = None,
             print(f"   ⚠️  [{label}] Claude failed: {e_claude}")
 
     return "All AI models failed."
-
-
-def _call_gemini(system_prompt: str, user_message: str, history: list = None) -> str:
-    return _call_llm(system_prompt, user_message, history, label="LLM", model="flux-pro")
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -388,12 +390,6 @@ class EmailAgent:
         except Exception as e:
             print(f"❌ [EmailAgent] Failed to send email to {to_email}: {e}")
             return False
-
-from werkzeug.security import generate_password_hash, check_password_hash
-try:
-    import bcrypt
-except ImportError:
-    bcrypt = None
 
 def _verify_password(stored_hash: str, password: str) -> bool:
     if not stored_hash:
@@ -661,11 +657,6 @@ Rules: Return ONLY valid JSON array of 3 objects. No extra text, no markdown fen
         print("   ⚠️  All AI models failed, using deterministic agronomy fallback.")
         return CropRecommendationAgent._rule_based_fallback(soil_type, n, p, k, temp, rain, water_const)
 
-    @staticmethod
-    def _ollama_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const):
-        """Backward-compatibility alias pointing to _flux_recommend_and_explain."""
-        return CropRecommendationAgent._flux_recommend_and_explain(soil_type, n, p, k, temp, rain, water_const)
-
     # ── Rule-based fallback (Ollama offline) ──────────────────────────────
     @staticmethod
     def _rule_based_fallback(soil_type, n, p, k, temp, rain, water_const):
@@ -846,7 +837,6 @@ Output EXACTLY this JSON structure:
             'harvest_timeline': 'Harvest when crop reaches maturity.',
         }
 
-# (genai and PIL already imported at top of file)
 
 class DiseaseDiagnosisAgent:
     _DIAGNOSIS_SYSTEM = (
@@ -859,9 +849,6 @@ class DiseaseDiagnosisAgent:
 
     @staticmethod
     def diagnose(leaf_text, leaf_image=None):
-        import json
-        import time
-        from urllib.parse import quote_plus
         has_image = bool(leaf_image and getattr(leaf_image, 'filename', None))
 
         print("\n" + "━" * 60)
@@ -1242,23 +1229,35 @@ class ReportAgent:
             'disease_diagnosis': last_diag if (last_diag and isinstance(last_diag, dict) and last_diag.get('diagnosis')) else None
         }
 
-        # ── 5. Fetch Spatial Twin Log (spatial_twin_log) ─────────────
+        # ── 5. Fetch Spatial Twin Log (spatial_twin_log or direct state) ─────
         spatial_row = {}
-        try:
-            sp_res = execute_fluxbase_sql(f"SELECT * FROM spatial_twin_log WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
-            spatial_row = sp_res['rows'][0] if sp_res.get('rows') else {}
-        except Exception:
-            pass
+        spatial_data_in = kwargs.get('spatial_data')
+        if spatial_data_in and isinstance(spatial_data_in, dict):
+            spatial_main = spatial_data_in.get('main_crop') or planned_crop
+            spatial_comp = spatial_data_in.get('companion') or spatial_data_in.get('companion_crop') or ('Soybean' if spatial_main == 'Corn' else 'Marigold')
+            spatial_mode = spatial_data_in.get('layout_mode') or 'Hexagonal Staggered Grid'
+            if str(spatial_mode).lower() == 'grid':
+                spatial_mode = 'Hexagonal Staggered Grid'
+            spatial_score = spatial_data_in.get('layout_score', 88)
+            spatial_soil = spatial_data_in.get('soil_impact') or 'improves soil nitrogen'
+            spatial_yield_val = spatial_data_in.get('insights', {}).get('total_yield') or spatial_data_in.get('total_yield')
+            has_spatial = True
+        else:
+            try:
+                sp_res = execute_fluxbase_sql(f"SELECT * FROM spatial_twin_log WHERE farmer_id={fid} ORDER BY created_at DESC LIMIT 1")
+                spatial_row = sp_res['rows'][0] if sp_res.get('rows') else {}
+            except Exception:
+                pass
 
-        has_spatial = bool(spatial_row)
-        spatial_main = spatial_row.get('main_crop') or planned_crop
-        spatial_comp = spatial_row.get('companion_crop') or ('Soybean' if spatial_main == 'Corn' else 'Marigold')
-        spatial_mode = spatial_row.get('layout_mode') or 'Hexagonal Staggered Grid'
-        if spatial_mode.lower() == 'grid':
-            spatial_mode = 'Hexagonal Staggered Grid'
-        spatial_score = spatial_row.get('layout_score', 88)
-        spatial_soil = spatial_row.get('soil_impact') or 'improves soil nitrogen'
-        spatial_yield_val = spatial_row.get('total_yield_t')
+            has_spatial = bool(spatial_row)
+            spatial_main = spatial_row.get('main_crop') or planned_crop
+            spatial_comp = spatial_row.get('companion_crop') or ('Soybean' if spatial_main == 'Corn' else 'Marigold')
+            spatial_mode = spatial_row.get('layout_mode') or 'Hexagonal Staggered Grid'
+            if spatial_mode.lower() == 'grid':
+                spatial_mode = 'Hexagonal Staggered Grid'
+            spatial_score = spatial_row.get('layout_score', 88)
+            spatial_soil = spatial_row.get('soil_impact') or 'improves soil nitrogen'
+            spatial_yield_val = spatial_row.get('total_yield_t')
 
         # Retrieve spacing metadata from SpatialPlannerAgent.CROP_DB
         main_meta = SpatialPlannerAgent.CROP_DB.get(spatial_main, SpatialPlannerAgent.CROP_DB.get('Corn', {}))
@@ -1961,7 +1960,8 @@ class SpatialPlannerAgent:
         }
 
     @staticmethod
-    def generate_layout(farmer_id, width, height, main_crop, layout_preference="Auto", acres=None):
+    def generate_layout(farmer_id, width=800, height=500, main_crop="Auto", layout_preference="Auto", acres=None,
+                        soil_data=None, water_const=None, farmer_data=None, **kwargs):
         """
         Structured Rule-Based Spatial Twin Agent.
         Implements: zone division, hexagonal placement, companion scoring,
@@ -2006,6 +2006,32 @@ class SpatialPlannerAgent:
         # ── 2. Memory Fetch ──────────────────────────────────────────
         print(f"   [Memory] Fetching farmer history for farmer_id={farmer_id}...")
         memory = SpatialPlannerAgent._fetch_farmer_memory(farmer_id)
+
+        # Merge in workflow / live parameter overrides if provided
+        if farmer_data and isinstance(farmer_data, dict):
+            if farmer_data.get('farmer_name') and farmer_data['farmer_name'] != 'Unknown':
+                memory['farmer_name'] = farmer_data['farmer_name']
+            if farmer_data.get('location') and farmer_data['location'] != 'Unknown':
+                memory['location'] = farmer_data['location']
+
+        if water_const:
+            memory['water'] = str(water_const).strip().capitalize()
+
+        if soil_data and isinstance(soil_data, dict):
+            if soil_data.get('soil_type'):
+                memory['soil_type'] = soil_data['soil_type']
+            n_val = soil_data.get('n')
+            if n_val is not None:
+                try:
+                    n_float = float(n_val)
+                    if n_float < 50:
+                        memory['nitrogen_level'] = 'Low'
+                    elif n_float > 120:
+                        memory['nitrogen_level'] = 'High'
+                    else:
+                        memory['nitrogen_level'] = 'Medium'
+                except (ValueError, TypeError):
+                    pass
 
         # Resolve land size: prefer map-drawn acres, then DB value
         farmer_name   = memory['farmer_name']
@@ -2830,5 +2856,11 @@ class OrchestratorAgent:
                 data['body'],
                 image_path=data.get('image_path')
             )
+        elif intent in ('pipeline', 'full_analysis', 'workflow'):
+            from agents.orchestrator_graph import run_full_analysis
+            return run_full_analysis(**data)
+        elif intent in ('pipeline_resume', 'workflow_resume', 'resume_analysis'):
+            from agents.orchestrator_graph import resume_pipeline
+            return resume_pipeline(**data)
         else:
             return {"error": "Unknown intent"}

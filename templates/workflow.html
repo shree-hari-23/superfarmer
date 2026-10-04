@@ -1,0 +1,2187 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+  /* ── Workflow Page Theme ─────────────────────────────────────────────── */
+  .wf-hero {
+    background: linear-gradient(135deg, #1b4d21 0%, #2e7d32 60%, #388e3c 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 2.2rem 2.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 12px 32px rgba(46, 125, 50, 0.22);
+    position: relative;
+    overflow: hidden;
+  }
+  .wf-hero::after {
+    content: "⚡";
+    position: absolute;
+    right: 20px;
+    bottom: -15px;
+    font-size: 8rem;
+    opacity: 0.12;
+    pointer-events: none;
+  }
+  .wf-hero h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .wf-hero p {
+    color: #e8f5e9;
+    font-size: 1.02rem;
+    max-width: 780px;
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+  }
+  .wf-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .wf-badge {
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: #fff;
+    padding: 0.35rem 0.85rem;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  /* ── Visual Interactive LangGraph Flow ───────────────────────────────── */
+  .graph-container {
+    background: #ffffff;
+    border: 1px solid #d4e9d4;
+    border-radius: 16px;
+    padding: 1.8rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #eef6ee;
+    padding-bottom: 0.8rem;
+  }
+  .graph-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .graph-pipeline-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    position: relative;
+  }
+  .pipeline-node {
+    background: #f8fdf5;
+    border: 2px solid #d4e9d4;
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .pipeline-node.idle {
+    border-color: #e2e8f0;
+    background: #f8fafc;
+    opacity: 0.85;
+  }
+  .pipeline-node.active {
+    border-color: #f59e0b;
+    background: #fffbeb;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.18);
+    transform: translateY(-3px);
+  }
+  .pipeline-node.completed {
+    border-color: #10b981;
+    background: #ecfdf5;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+  }
+  .node-step-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 0.3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .node-icon-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1e293b;
+    margin-bottom: 0.4rem;
+  }
+  .node-handoff {
+    font-size: 0.78rem;
+    color: #475569;
+    line-height: 1.4;
+    background: rgba(0, 0, 0, 0.03);
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border-left: 3px solid #cbd5e1;
+  }
+  .pipeline-node.completed .node-handoff {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.08);
+    color: #065f46;
+  }
+
+  /* ── Form Section ────────────────────────────────────────────────────── */
+  .wf-layout-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 1.8rem;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 900px) {
+    .wf-layout-grid { grid-template-columns: 1fr; }
+  }
+  .form-card {
+    background: #ffffff;
+    border: 1px solid #d4e9d4;
+    border-radius: 16px;
+    padding: 1.6rem;
+    box-shadow: var(--shadow-sm);
+    height: fit-content;
+  }
+  .form-card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .form-card-desc {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 1.2rem;
+  }
+  .form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  .form-row-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.6rem;
+  }
+  .form-group {
+    margin-bottom: 0.9rem;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.25rem;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    background: #fff;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.12);
+  }
+  .btn-run-pipeline {
+    width: 100%;
+    background: linear-gradient(135deg, #2e7d32 0%, #15803d 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+  }
+  .btn-run-pipeline:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1e6322 0%, #166534 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(22, 163, 74, 0.45);
+  }
+  .btn-run-pipeline:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  /* ── Right Column: Execution Console & Progress ───────────────────────── */
+  .console-panel {
+    background: #0f172a;
+    border-radius: 16px;
+    padding: 1.5rem;
+    color: #f8fafc;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 440px;
+  }
+  .console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .console-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .console-timer {
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #38bdf8;
+    background: #1e293b;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+  }
+  .progress-bar-container {
+    width: 100%;
+    height: 6px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    transition: width 0.4s ease;
+  }
+  .console-log-box {
+    background: #090d16;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    overflow-y: auto;
+    flex-grow: 1;
+    max-height: 380px;
+    color: #cbd5e1;
+  }
+  .console-log-box .log-line {
+    margin-bottom: 0.35rem;
+    display: flex;
+    gap: 0.6rem;
+  }
+  .console-log-box .log-ts {
+    color: #64748b;
+    user-select: none;
+  }
+  .console-log-box .log-success { color: #34d399; font-weight: 600; }
+  .console-log-box .log-info { color: #38bdf8; }
+  .console-log-box .log-step { color: #fbbf24; font-weight: 600; }
+  .console-log-box .log-accent { color: #a78bfa; }
+
+  /* ── Chained Results Section ─────────────────────────────────────────── */
+  .results-section {
+    display: none;
+    margin-top: 2rem;
+    animation: fadeIn 0.4s ease forwards;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .kpi-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+  }
+  .kpi-card {
+    background: #ffffff;
+    border: 1px solid #d4e9d4;
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .kpi-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+  }
+  .kpi-val {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+  }
+  .kpi-sub {
+    font-size: 0.78rem;
+    color: #10b981;
+    font-weight: 600;
+    margin-top: 0.2rem;
+  }
+
+  /* Result Tabs */
+  .tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 1.4rem;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 0.6rem 1.1rem;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--primary); }
+  .tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+  .tab-pane {
+    display: none;
+    background: #ffffff;
+    border: 1px solid #d4e9d4;
+    border-radius: 16px;
+    padding: 1.8rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .tab-pane.active { display: block; }
+
+  /* Tab specific components */
+  .plan-timeline-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem;
+  }
+  .timeline-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.2rem;
+    border-left: 4px solid var(--primary);
+  }
+  .timeline-card h4 {
+    font-size: 0.95rem;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .timeline-card p {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.5;
+  }
+
+  .action-btn-row {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .btn-outline-action {
+    background: transparent;
+    border: 1.5px solid var(--primary);
+    color: var(--primary);
+    border-radius: 8px;
+    padding: 0.55rem 1.2rem;
+    font-weight: 600;
+    font-size: 0.88rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s;
+  }
+  .btn-outline-action:hover {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  /* ── Spatial Twin 2D & 3D Visualizer Styles ── */
+  @keyframes sway {
+    0%, 100% { transform: translateZ(var(--h)) rotate(-3deg); }
+    50% { transform: translateZ(var(--h)) rotate(3deg); }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 8px 3px var(--glow), inset 0 0 5px rgba(255, 255, 255, 0.3); }
+    50% { box-shadow: 0 0 16px 6px var(--glow), inset 0 0 10px rgba(255, 255, 255, 0.5); }
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  .plant-node {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    contain: layout style;
+  }
+  .plant-node:hover {
+    transform: scale(1.4) !important;
+    z-index: 9999 !important;
+  }
+  .plant-wrap-3d {
+    transform-style: preserve-3d;
+    contain: layout style;
+    will-change: transform;
+    transition: z-index 0.2s;
+  }
+  .plant-wrap-3d:hover {
+    z-index: 99999 !important;
+  }
+  .plant-badge-3d {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .legend-panel {
+    display: none;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 18px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-top: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #334155;
+  }
+  .legend-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.15);
+  }
+  .wf-spatial-mode-btn {
+    background: #f8fafc;
+    color: #475569;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .wf-spatial-mode-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  .wf-spatial-mode-btn.active {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    box-shadow: 0 3px 10px rgba(46, 125, 50, 0.25);
+  }
+</style>
+
+<!-- ── HERO ───────────────────────────────────────────────────────────── -->
+<div class="wf-hero">
+  <h1><span>⚡</span> Autonomous Multi-Agent Pipeline</h1>
+  <p>
+    Tired of triggering agents one by one? In this unified multi-step workflow powered by 
+    <strong>LangGraph StateGraph</strong>, each agricultural agent's output automatically feeds into the next — from initial soil analysis to crop planning, spatial twin design, yield optimization, and advisory reporting.
+  </p>
+  <div class="wf-badges">
+    <span class="wf-badge">🕸️ LangGraph StateGraph</span>
+    <span class="wf-badge">🔄 5 Chained Agents</span>
+    <span class="wf-badge">📦 Shared FarmState</span>
+    <span class="wf-badge">⚡ 0 Manual Handoffs</span>
+  </div>
+</div>
+
+<!-- ── INTERACTIVE LANGGRAPH WORKFLOW VISUALIZER ─────────────────────── -->
+<div class="graph-container">
+  <div class="graph-header">
+    <div class="graph-title">
+      <span>📐</span> Active Orchestration Graph Architecture
+    </div>
+    <span id="pipeline-overall-status" style="font-size: 0.82rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 0.3rem 0.8rem; border-radius: 50px;">
+      State: Ready to Execute
+    </span>
+  </div>
+
+  <div class="graph-pipeline-strip">
+    <!-- Node 1 -->
+    <div class="pipeline-node idle" id="node-rec">
+      <div class="node-step-tag">
+        <span>Step 1 of 6</span>
+        <span class="node-badge" id="badge-rec">Pending</span>
+      </div>
+      <div class="node-icon-title">
+        <span>🌾</span> Crop Recommendation
+      </div>
+      <div class="node-handoff" id="handoff-rec">
+        Inputs: Soil NPK &amp; Climate<br>
+        <strong>Outputs: Top Crop</strong>
+      </div>
+    </div>
+
+    <!-- Node 2 -->
+    <div class="pipeline-node idle" id="node-plan">
+      <div class="node-step-tag">
+        <span>Step 2 of 6</span>
+        <span class="node-badge" id="badge-plan">Pending</span>
+      </div>
+      <div class="node-icon-title">
+        <span>📅</span> Crop Planner
+      </div>
+      <div class="node-handoff" id="handoff-plan">
+        Inputs: Recommended Crop<br>
+        <strong>Outputs: 5-Stage Plan</strong>
+      </div>
+    </div>
+
+    <!-- Node 3 -->
+    <div class="pipeline-node idle" id="node-spatial">
+      <div class="node-step-tag">
+        <span>Step 3 of 6</span>
+        <span class="node-badge" id="badge-spatial">Pending</span>
+      </div>
+      <div class="node-icon-title">
+        <span>🗺️</span> Spatial Digital Twin
+      </div>
+      <div class="node-handoff" id="handoff-spatial">
+        Inputs: Crop + Land Size<br>
+        <strong>Outputs: Layout &amp; Companion</strong>
+      </div>
+    </div>
+
+    <!-- Node 4 -->
+    <div class="pipeline-node idle" id="node-yield">
+      <div class="node-step-tag">
+        <span>Step 4 of 6</span>
+        <span class="node-badge" id="badge-yield">Pending</span>
+      </div>
+      <div class="node-icon-title">
+        <span>📈</span> Yield Optimizer
+      </div>
+      <div class="node-handoff" id="handoff-yield">
+        Inputs: Main + Companion<br>
+        <strong>Outputs: % Intercrop Gain</strong>
+      </div>
+    </div>
+
+    <!-- Node 5 -->
+    <div class="pipeline-node idle" id="node-disease">
+      <div class="node-step-tag">
+        <span>Step 5 of 6</span>
+        <span class="node-badge" id="badge-disease">Pending</span>
+      </div>
+      <div class="node-icon-title">
+        <span>🔬</span> Disease Diagnosis
+      </div>
+      <div class="node-handoff" id="handoff-disease">
+        Inputs: Leaf Image / Symptoms<br>
+        <strong>Human-in-the-Loop ⏸️</strong>
+      </div>
+    </div>
+
+    <!-- Node 6 -->
+    <div class="pipeline-node idle" id="node-report">
+      <div class="node-step-tag">
+        <span>Step 6 of 6</span>
+        <span class="node-badge" id="badge-report">Pending</span>
+      </div>
+      <div class="node-icon-title">
+        <span>📄</span> Field Advisory Report
+      </div>
+      <div class="node-handoff" id="handoff-report">
+        Inputs: All Accumulated Data<br>
+        <strong>Outputs: 7-Section Report</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FORM & CONSOLE WORKFLOW GRID ──────────────────────────────────── -->
+<div class="wf-layout-grid">
+  <!-- Left Column: Input Card -->
+  <div class="form-card">
+    <h3><span>⚙️</span> Farm Parameters</h3>
+    <p class="form-card-desc">
+      Pre-filled from your farmer profile. Modify any values to run a simulated scenario.
+    </p>
+
+    <form id="pipeline-form">
+      <input type="hidden" id="farmer_name" name="farmer_name" value="{{ farmer.farmer_name }}">
+      <input type="hidden" id="location" name="location" value="{{ farmer.location }}">
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="soil_type">Soil Type</label>
+          <select id="soil_type" name="soil_type">
+            <option value="Black" {% if farmer.soil_type == 'Black' %}selected{% endif %}>Black Soil</option>
+            <option value="Alluvial" {% if farmer.soil_type == 'Alluvial' %}selected{% endif %}>Alluvial</option>
+            <option value="Red" {% if farmer.soil_type == 'Red' %}selected{% endif %}>Red Soil</option>
+            <option value="Loamy" {% if farmer.soil_type == 'Loamy' %}selected{% endif %}>Loamy</option>
+            <option value="Sandy" {% if farmer.soil_type == 'Sandy' %}selected{% endif %}>Sandy</option>
+            <option value="Laterite" {% if farmer.soil_type == 'Laterite' %}selected{% endif %}>Laterite</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="water_const">Water Availability</label>
+          <select id="water_const" name="water_const">
+            <option value="Low" {% if farmer.water_const == 'Low' %}selected{% endif %}>Low</option>
+            <option value="Medium" {% if farmer.water_const == 'Medium' %}selected{% endif %}>Medium</option>
+            <option value="High" {% if farmer.water_const == 'High' %}selected{% endif %}>High</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label for="n">N (mg/kg)</label>
+          <input type="number" id="n" name="n" value="{{ farmer.n }}" required>
+        </div>
+        <div class="form-group">
+          <label for="p">P (mg/kg)</label>
+          <input type="number" id="p" name="p" value="{{ farmer.p }}" required>
+        </div>
+        <div class="form-group">
+          <label for="k">K (mg/kg)</label>
+          <input type="number" id="k" name="k" value="{{ farmer.k }}" required>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="temp">Temperature (°C)</label>
+          <input type="number" id="temp" name="temp" value="{{ farmer.temp }}" step="0.5" required>
+        </div>
+        <div class="form-group">
+          <label for="rain">Avg Rain (mm)</label>
+          <input type="number" id="rain" name="rain" value="{{ farmer.rain }}" required>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label for="land_size">Land Size (Acres)</label>
+          <input type="number" id="land_size" name="land_size" value="{{ farmer.land_size }}" step="0.1" required>
+        </div>
+        <div class="form-group">
+          <label for="layout_preference">Twin Layout Mode</label>
+          <select id="layout_preference" name="layout_preference">
+            <option value="Auto">Auto (Smart Memory)</option>
+            <option value="High Density Intercrop">High Density</option>
+            <option value="Organic Pest Barrier">Pest Barrier</option>
+            <option value="Grid Layout">Traditional Grid</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="submit" id="btn-submit" class="btn-run-pipeline">
+        <span>🚀</span> Run Autonomous Pipeline
+      </button>
+    </form>
+  </div>
+
+  <!-- Right Column: Live Console & Step Tracker -->
+  <div class="console-panel">
+    <div class="console-header">
+      <div class="console-title">
+        <span>💻</span> LangGraph State Execution Stream
+      </div>
+      <div class="console-timer" id="console-timer">00:00</div>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progress-bar"></div>
+    </div>
+
+    <div class="console-log-box" id="console-logs">
+      <div class="log-line">
+        <span class="log-ts">[Ready]</span>
+        <span class="log-info">Pipeline initialized. Click "Run Autonomous Pipeline" to trigger StateGraph.</span>
+      </div>
+      <div class="log-line">
+        <span class="log-ts">[Flow]</span>
+        <span>Recommendation ➔ Plan ➔ Spatial Twin ➔ Yield Optimizer ➔ Disease Diagnosis (HITL ⏸️) ➔ Advisory Report</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HUMAN-IN-THE-LOOP INTERRUPT CARD (DISEASE DIAGNOSIS) ── -->
+<div id="hitl-disease-card" style="display:none; margin-bottom: 2rem; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2.5px solid #f59e0b; border-radius: 16px; padding: 1.8rem; box-shadow: 0 10px 28px rgba(245, 158, 11, 0.2); animation: fadeIn 0.3s ease;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 0.8rem; flex-wrap:wrap; gap:0.5rem;">
+    <div style="display:flex; align-items:center; gap:0.8rem;">
+      <div style="font-size:2rem; background:#fef3c7; border:2px solid #f59e0b; width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center;">⏸️</div>
+      <div>
+        <h3 style="margin:0; font-size:1.2rem; color:#92400e; font-weight:800;">
+          LangGraph Human-in-the-Loop Interrupt
+        </h3>
+        <span style="font-size:0.8rem; background:#fbbf24; color:#78350f; padding:2px 10px; border-radius:50px; font-weight:700;">
+          Step 5 of 6: Disease Diagnosis Agent Check
+        </span>
+      </div>
+    </div>
+    <span style="font-size:0.82rem; font-family:monospace; color:#b45309; background:rgba(255,255,255,0.85); padding:4px 10px; border-radius:8px; border:1px solid #fde68a;">
+      State: Interrupted (Awaiting Farmer)
+    </span>
+  </div>
+
+  <p id="hitl-question" style="color: #78350f; font-size: 1.05rem; font-weight: 600; line-height: 1.5; margin: 0.8rem 0 1.2rem 0;">
+    The workflow has reached the <strong>Disease Diagnosis Agent</strong>. Would you like to upload a plant or leaf image for disease diagnosis?
+  </p>
+
+  <!-- Initial Decision Buttons -->
+  <div id="hitl-choice-row" style="display:flex; gap:1rem; flex-wrap:wrap;">
+    <button type="button" id="btn-hitl-yes" onclick="handleHitlYes()"
+      style="background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; border: none; border-radius: 10px; padding: 0.85rem 1.6rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35); transition: all 0.2s;">
+      <span>📸</span> Yes, Upload Plant/Leaf Image
+    </button>
+    <button type="button" id="btn-hitl-no" onclick="handleHitlNo()"
+      style="background: #ffffff; color: #475569; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.85rem 1.6rem; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s;">
+      <span>⏭️</span> No, Skip Disease Diagnosis
+    </button>
+  </div>
+
+  <!-- Upload Form (Expanded when farmer chooses Yes) -->
+  <div id="hitl-upload-panel" style="display:none; margin-top: 1.4rem; background: #ffffff; border: 2px dashed #f59e0b; border-radius: 14px; padding: 1.4rem;">
+    <div style="font-weight:700; color:#1e293b; font-size:1.02rem; margin-bottom:0.8rem; display:flex; align-items:center; gap:0.5rem;">
+      <span>🔬</span> Upload Leaf Photo &amp; Symptom Details
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:0.35rem;">
+        Select Leaf or Plant Photo (JPEG, PNG, WEBP):
+      </label>
+      <input type="file" id="hitl-image-file" accept="image/*"
+        style="width: 100%; padding: 0.55rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem; background: #f8fafc;">
+      <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">
+        Photos will be evaluated by Multimodal Vision models (Google Gemini Native Vision / Fluxbase Vision).
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.2rem;">
+      <label style="display:block; font-size:0.84rem; font-weight:700; color:#334155; margin-bottom:0.35rem;">
+        Describe Symptoms or Observations (Optional):
+      </label>
+      <input type="text" id="hitl-symptom-text" placeholder="e.g. Yellow lesions on upper leaf surface, curled edges, powder on stems"
+        style="width: 100%; padding: 0.6rem 0.8rem; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.88rem;">
+    </div>
+
+    <div style="display:flex; gap:0.8rem; flex-wrap:wrap;">
+      <button type="button" id="btn-hitl-submit-upload" onclick="submitHitlUpload()"
+        style="background: linear-gradient(135deg, #2e7d32, #15803d); color: #fff; border: none; border-radius: 10px; padding: 0.85rem 1.6rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);">
+        <span>🚀</span> Analyze Image &amp; Resume Workflow
+      </button>
+      <button type="button" onclick="cancelHitlUpload()"
+        style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.85rem 1.2rem; font-weight: 600; cursor: pointer;">
+        Back to Options
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHAINED RESULTS HUB ────────────────────────────────────────────── -->
+<div class="results-section" id="results-hub">
+  <!-- KPI Banner -->
+  <div class="kpi-banner">
+    <div class="kpi-card">
+      <div class="kpi-label">Primary Crop Selected</div>
+      <div class="kpi-val" id="res-top-crop">—</div>
+      <div class="kpi-sub">Passed to Planner &amp; Spatial Twin</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Companion Crop Paired</div>
+      <div class="kpi-val" id="res-companion">—</div>
+      <div class="kpi-sub">Nitrogen Fixation &amp; Pest Synergy</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Spatial Layout Score</div>
+      <div class="kpi-val" id="res-layout-score">—</div>
+      <div class="kpi-sub" id="res-plant-count">0 plants on grid</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Yield Boost vs Monoculture</div>
+      <div class="kpi-val" id="res-yield-boost">—</div>
+      <div class="kpi-sub">Intercropping Advantage</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Disease Pathology</div>
+      <div class="kpi-val" id="res-disease-status">—</div>
+      <div class="kpi-sub" id="res-disease-sub">Human-in-the-Loop</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Advisory Report</div>
+      <div class="kpi-val" id="res-report-num">#—</div>
+      <div class="kpi-sub">7 Sections Synthesized</div>
+    </div>
+  </div>
+
+  <!-- Result Navigation Tabs -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('tab-rec')">🌾 1. Recommended Crop</button>
+    <button class="tab-btn" onclick="switchTab('tab-plan')">📅 2. 5-Stage Crop Plan</button>
+    <button class="tab-btn" onclick="switchTab('tab-spatial')">🗺️ 3. Spatial Digital Twin</button>
+    <button class="tab-btn" onclick="switchTab('tab-yield')">📈 4. Yield &amp; Profit Boost</button>
+    <button class="tab-btn" onclick="switchTab('tab-disease')">🔬 5. Disease Diagnosis</button>
+    <button class="tab-btn" onclick="switchTab('tab-report')">📄 6. Advisory Report</button>
+  </div>
+
+  <!-- Tab 1: Crop Recommendation -->
+  <div class="tab-pane active" id="tab-rec">
+    <h3 style="color: var(--primary-dark); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+      <span>🌾</span> Crop Recommendation Output (Fed into Step 2)
+    </h3>
+    <p style="color: #475569; margin-bottom: 1.2rem;" id="rec-summary-text"></p>
+    <div id="rec-crops-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;"></div>
+  </div>
+
+  <!-- Tab 2: Crop Plan -->
+  <div class="tab-pane" id="tab-plan">
+    <h3 style="color: var(--primary-dark); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+      <span>📅</span> 5-Stage Crop Management Plan (Generated for Top Crop)
+    </h3>
+    <p style="color: #475569; margin-bottom: 1.2rem;">
+      The CropPlannerAgent ingested the recommended crop and synthesized an actionable seasonal schedule.
+    </p>
+    <div class="plan-timeline-grid" id="plan-cards-container"></div>
+    <div class="action-btn-row">
+      <a href="{{ url_for('plan') }}" class="btn-outline-action">Open in Crop Planner →</a>
+    </div>
+  </div>
+
+  <!-- Tab 3: Spatial Digital Twin -->
+  <div class="tab-pane" id="tab-spatial">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem; margin-bottom:1.2rem;">
+      <div>
+        <h3 style="color: var(--primary-dark); margin:0 0 0.3rem 0; display:flex; align-items:center; gap:0.5rem;">
+          <span>🗺️</span> Spatial Digital Twin: 2D &amp; 3D Autonomous Multi-Crop Layout
+        </h3>
+        <p style="color: #475569; margin:0; font-size:0.92rem;" id="spatial-summary-text">
+          Precision agro-ecological layout generated by SpatialPlannerAgent using hexagonal staggered coordinates, spacing rules, and canopy height modeling.
+        </p>
+      </div>
+
+      <!-- View Switcher Controls -->
+      <div style="display:flex; gap:0.4rem; background:#f1f5f9; padding:4px; border-radius:10px; border:1px solid #cbd5e1;">
+        <button type="button" class="wf-spatial-mode-btn active" id="btn-wf-view-3d" onclick="setWfSpatialView('3d')">
+          🌾 3D Spatial Twin
+        </button>
+        <button type="button" class="wf-spatial-mode-btn" id="btn-wf-view-2d" onclick="setWfSpatialView('2d')">
+          🗺️ 2D Field Grid
+        </button>
+        <button type="button" class="wf-spatial-mode-btn" id="btn-wf-view-split" onclick="setWfSpatialView('split')">
+          🔲 Side-by-Side
+        </button>
+      </div>
+    </div>
+
+    <!-- ── DUAL 2D & 3D CANVASES CONTAINER ── -->
+    <div id="wf-spatial-canvases-container" style="display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 1.5rem;">
+
+      <!-- 3D Visualization Card -->
+      <div id="wf-3d-card" style="background:#ffffff; border:1px solid #d4e9d4; border-radius:14px; padding:1.2rem; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.9rem; flex-wrap:wrap; gap:0.5rem;">
+          <div style="font-weight:700; color:#334155; font-size:0.98rem; display:flex; align-items:center; gap:0.4rem;">
+            <span>🌾</span> 3D Digital Farm Twin Visualization (Isometric Pure-CSS Space)
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <button type="button" onclick="resetWf3DView()" style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:5px 12px; font-size:0.8rem; font-weight:600; cursor:pointer;">
+              ⟳ Reset View
+            </button>
+            <span style="background:#ecfdf5; color:#16a34a; border-radius:6px; padding:5px 10px; font-size:0.78rem; font-weight:700;">
+              🖱 Drag to rotate · Scroll to zoom
+            </span>
+          </div>
+        </div>
+
+        <!-- 3D Perspective Wrapper -->
+        <div id="wf-isometric-wrapper"
+          style="perspective: 1800px; padding: 2.8rem 0 6.5rem 0; display: flex; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #e0f2fe 0%, #f8fafc 60%, #e5e7eb 100%); overflow: hidden; cursor: grab; border-radius:10px; border:1px solid #e2e8f0; position:relative; min-height:480px;">
+          
+          <!-- Isometric Floor Plane -->
+          <div id="wf-isometric-floor"
+            style="width: 800px; height: 500px; transform: scale(1) rotateX(60deg) rotateZ(-45deg); border-radius: 14px; box-shadow: -30px 40px 70px rgba(0,0,0,0.2); position: relative; overflow: visible; transform-style: preserve-3d; margin: 0 auto; background: repeating-conic-gradient(#a7c47a 0% 25%, #8fb56a 25% 50%) 0 0 / 40px 40px; transition: transform 0.05s ease-out;">
+            
+            <!-- Soil border frame -->
+            <div style="position:absolute; inset:0; border-radius:14px; border:6px solid #5c3d1a; box-shadow:inset 0 0 30px rgba(0,0,0,0.2);"></div>
+
+            <!-- Water tank (blue sphere) -->
+            <div style="position: absolute; top: -70px; right: 30px; width: 55px; height: 55px; background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8); border-radius: 50%; box-shadow: -5px 8px 20px rgba(0,0,0,0.4); transform: translateZ(60px); z-index:20;"></div>
+            <div style="position:absolute; top:-92px; right:12px; font-size:0.6rem; font-weight:700; color:#1d4ed8; transform:translateZ(60px); z-index:20; text-shadow:0 1px 2px #fff;">💧 Water Tank</div>
+
+            <!-- Barn -->
+            <div style="position: absolute; top: -130px; right: 100px; width: 90px; height: 70px; background: linear-gradient(180deg,#b45309,#92400e); border-radius: 4px; box-shadow: -6px 10px 25px rgba(0,0,0,0.45); transform: translateZ(55px); z-index:20;">
+              <div style="position:absolute; top:-22px; left:-6px; right:-6px; height:26px; background:linear-gradient(160deg,#dc2626,#991b1b); clip-path:polygon(0 100%,50% 0,100% 100%); border-radius:2px;"></div>
+              <div style="position:absolute; bottom:0; left:30%; width:40%; height:55%; background:#451a03; border-radius:2px 2px 0 0;"></div>
+            </div>
+            <div style="position:absolute; top:-148px; right:90px; font-size:0.6rem; font-weight:700; color:#92400e; transform:translateZ(55px); z-index:20; text-shadow:0 1px 2px #fff;">🏠 Barn</div>
+
+            <!-- Waiting Label -->
+            <div id="wf-waiting-label-3d"
+              style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotateZ(45deg) rotateX(-60deg); font-size: 1.25rem; color: #6b7280; font-weight: bold; z-index: 10; white-space:nowrap; text-align:center;">
+              🌱 Run LangGraph pipeline to generate 3D Spatial Twin...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2D Precision Layout Card -->
+      <div id="wf-2d-card" style="background:#ffffff; border:1px solid #d4e9d4; border-radius:14px; padding:1.2rem; box-shadow:var(--shadow-sm); display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.9rem; flex-wrap:wrap; gap:0.5rem;">
+          <div style="font-weight:700; color:#334155; font-size:0.98rem; display:flex; align-items:center; gap:0.4rem;">
+            <span>🗺️</span> 2D Field Zone Division &amp; Plant Node Spacing
+          </div>
+          <span id="wf-2d-mode-tag" style="background:#eff6ff; color:#2563eb; border-radius:6px; padding:4px 10px; font-size:0.78rem; font-weight:700;">
+            Layout: Auto-Optimized
+          </span>
+        </div>
+
+        <div id="wf-grid-layout-container"
+          style="position: relative; overflow: hidden; background: #f1f5f9; border-radius: 10px; border: 1.5px solid #cbd5e1; height: 440px; width: 100%; box-sizing: border-box;">
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #94a3b8; font-size: 1rem; text-align: center; width: 100%;">
+            🌱 2D Layout coordinates ready upon pipeline execution
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Crop Legend -->
+    <div id="wf-legend-panel" class="legend-panel"></div>
+
+    <!-- ── FARM SCALE & METRIC CARDS ── -->
+    <div id="wf-spatial-metrics" style="display:none; margin-top:1.5rem;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:1rem;">
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px; text-align:center;">
+          <div style="font-size:0.75rem; color:#6b7280; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Main Crop</div>
+          <div id="wf-kpi-main" style="font-size:1.15rem; font-weight:800; color:#15803d;">—</div>
+        </div>
+        <div style="background:#fef9c3; border:1px solid #fde68a; border-radius:10px; padding:12px; text-align:center;">
+          <div style="font-size:0.75rem; color:#6b7280; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Companion Crop</div>
+          <div id="wf-kpi-comp" style="font-size:1.15rem; font-weight:800; color:#b45309;">—</div>
+        </div>
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px; text-align:center;">
+          <div style="font-size:0.75rem; color:#6b7280; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Field Scale</div>
+          <div id="wf-kpi-land" style="font-size:1.15rem; font-weight:800; color:#1d4ed8;">—</div>
+          <div id="wf-kpi-dim" style="font-size:0.72rem; color:#64748b; margin-top:2px;">—</div>
+        </div>
+        <div style="background:#faf5ff; border:1px solid #e9d5ff; border-radius:10px; padding:12px; text-align:center;">
+          <div style="font-size:0.75rem; color:#6b7280; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Commercial Field Population</div>
+          <div id="wf-kpi-plants" style="font-size:1.15rem; font-weight:800; color:#7e22ce;">—</div>
+          <div id="wf-kpi-scale" style="font-size:0.72rem; color:#9333ea; margin-top:2px;">—</div>
+        </div>
+      </div>
+
+      <!-- Score & Metric Pills -->
+      <div id="wf-metric-pills" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:1.2rem;"></div>
+    </div>
+
+    <!-- ── STRUCTURED 9-HEADING AI EXPLANATION ── -->
+    <div id="wf-spatial-analysis"
+      style="display:none; margin-top:1.2rem; padding:1.6rem; background:linear-gradient(135deg,#f0fdf4,#ecfdf5); border-left:5px solid var(--primary); border-radius:10px; font-size:0.95rem; line-height:1.7; box-shadow:0 4px 12px rgba(22,163,74,0.06);">
+    </div>
+
+    <!-- ── COMMERCIAL ZONE ALLOCATION TABLE ── -->
+    <div id="wf-zone-table-container" style="display:none; margin-top:1.2rem;"></div>
+
+    <!-- ── MEMORY DECISIONS PANEL ── -->
+    <div id="wf-memory-panel" style="display:none; margin-top:1.2rem; background:#fbfbfe; border:1px solid #e9d5ff; border-left:5px solid #7c3aed; border-radius:12px; padding:1.4rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.8rem; flex-wrap:wrap; gap:0.5rem;">
+        <h4 style="margin:0; color:#5b21b6; font-size:1rem; display:flex; align-items:center; gap:6px;">
+          <span>🧠</span> Farmer Memory &amp; Rotation Decisions
+        </h4>
+        <div id="wf-soil-impact-badge" style="padding:4px 12px; border-radius:20px; font-size:0.8rem; font-weight:700;"></div>
+      </div>
+      <div id="wf-override-notice" style="display:none; background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; margin-bottom:0.8rem;"></div>
+      <div id="wf-memory-log-steps" style="margin-bottom:0.8rem;"></div>
+      <div id="wf-memory-warnings"></div>
+    </div>
+
+    <!-- ── LIMITATIONS & ACTION ITEMS ── -->
+    <div id="wf-limitations-container" style="display:none; margin-top:1.2rem;"></div>
+
+    <!-- Navigation Link -->
+    <div class="action-btn-row">
+      <a href="{{ url_for('spatial_planner') }}" class="btn-outline-action">
+        Open Dedicated Spatial Twin Canvas (with Satellite GPS Map) →
+      </a>
+    </div>
+  </div>
+
+  <!-- Tab 4: Yield Comparison -->
+  <div class="tab-pane" id="tab-yield">
+    <h3 style="color: var(--primary-dark); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+      <span>📈</span> Yield &amp; Revenue Projection
+    </h3>
+    <p style="color: #475569; margin-bottom: 1.2rem;">
+      The YieldComparisonAgent evaluated intercropping synergy between the primary and companion crops.
+    </p>
+    <div id="yield-report-content" style="white-space: pre-line; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; font-family: monospace; font-size: 0.9rem; line-height: 1.6;"></div>
+  </div>
+
+  <!-- Tab 5: Disease Diagnosis -->
+  <div class="tab-pane" id="tab-disease">
+    <h3 style="color: var(--primary-dark); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+      <span>🔬</span> Step 5: Plant Disease Diagnosis &amp; Pathology Advisory
+    </h3>
+    <p style="color: #475569; margin-bottom: 1.2rem;" id="disease-tab-summary">
+      DiseaseDiagnosisAgent evaluated crop health via vision AI models and agricultural pathology rules.
+    </p>
+    <div id="disease-tab-content">
+      <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px; padding:2rem; text-align:center; color:#64748b;">
+        <div style="font-size:2rem; margin-bottom:0.4rem;">🔬</div>
+        <p style="margin:0; font-size:0.9rem;">Run the LangGraph workflow to initiate the Disease Diagnosis Agent check.</p>
+      </div>
+    </div>
+    <div class="action-btn-row">
+      <a href="{{ url_for('disease_get') }}" class="btn-outline-action">Open Standalone Disease AI Scanner →</a>
+    </div>
+  </div>
+
+  <!-- Tab 6: Advisory Report -->
+  <div class="tab-pane" id="tab-report">
+    <h3 style="color: var(--primary-dark); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem;">
+      <span>📄</span> Step 6: Synthesized Field Advisory Report (7 Sections)
+    </h3>
+    <p style="color: #475569; margin-bottom: 1.2rem;">
+      ReportAgent aggregated all upstream outputs into this comprehensive advisory document.
+    </p>
+    <div id="report-summary-lines" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.2rem; margin-bottom: 1.2rem;"></div>
+    <div class="action-btn-row">
+      <a href="{{ url_for('report') }}" class="btn-outline-action">Open Full Official Report →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  let timerInterval = null;
+  let secondsElapsed = 0;
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  function addLog(text, type = '') {
+    const box = document.getElementById('console-logs');
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    const now = new Date();
+    const timeStr = now.toTimeString().split(' ')[0];
+    
+    let cls = '';
+    if (type === 'step') cls = 'log-step';
+    else if (type === 'success') cls = 'log-success';
+    else if (type === 'accent') cls = 'log-accent';
+    else if (type === 'info') cls = 'log-info';
+
+    line.innerHTML = `<span class="log-ts">[${timeStr}]</span> <span class="${cls}">${text}</span>`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function setNodeState(nodeId, state, badgeText) {
+    const el = document.getElementById(`node-${nodeId}`);
+    const badge = document.getElementById(`badge-${nodeId}`);
+    el.className = `pipeline-node ${state}`;
+    badge.innerText = badgeText;
+  }
+
+  document.getElementById('pipeline-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.innerHTML = '<span>⚙️</span> Orchestrating Pipeline...';
+
+    // Reset UI
+    document.getElementById('results-hub').style.display = 'none';
+    document.getElementById('console-logs').innerHTML = '';
+    document.getElementById('pipeline-overall-status').innerText = 'State: Executing LangGraph...';
+    document.getElementById('pipeline-overall-status').style.color = '#d97706';
+    document.getElementById('pipeline-overall-status').style.background = '#fef3c7';
+
+    // Reset Nodes (All 6 nodes)
+    ['rec', 'plan', 'spatial', 'yield', 'disease', 'report'].forEach(n => setNodeState(n, 'idle', 'Pending'));
+    document.getElementById('hitl-disease-card').style.display = 'none';
+    document.getElementById('hitl-upload-panel').style.display = 'none';
+    
+    // Start Timer
+    secondsElapsed = 0;
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      secondsElapsed++;
+      const m = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+      const s = String(secondsElapsed % 60).padStart(2, '0');
+      document.getElementById('console-timer').innerText = `${m}:${s}`;
+    }, 1000);
+
+    // Initial Logs
+    addLog('LangGraph StateGraph initialized with Human-in-the-Loop & MemorySaver Checkpoint...', 'step');
+    addLog('Node 1 [recommendation] running: analyzing soil parameters...', 'info');
+    setNodeState('rec', 'active', 'Running...');
+    document.getElementById('progress-bar').style.width = '15%';
+
+    // Read form values
+    const payload = {
+      soil_type: document.getElementById('soil_type').value,
+      water_const: document.getElementById('water_const').value,
+      n: parseFloat(document.getElementById('n').value) || 80,
+      p: parseFloat(document.getElementById('p').value) || 40,
+      k: parseFloat(document.getElementById('k').value) || 40,
+      temp: parseFloat(document.getElementById('temp').value) || 27,
+      rain: parseFloat(document.getElementById('rain').value) || 800,
+      land_size: parseFloat(document.getElementById('land_size').value) || 1.0,
+      layout_preference: document.getElementById('layout_preference').value,
+      farmer_name: (document.getElementById('farmer_name') && document.getElementById('farmer_name').value) || 'Farmer',
+      location: (document.getElementById('location') && document.getElementById('location').value) || 'India',
+    };
+
+    // Simulated step transitions while waiting for the LLM pipeline
+    const simTimeout1 = setTimeout(() => {
+      addLog('Node 1 completed. Extracting top crop for downstream handoff...', 'success');
+      setNodeState('rec', 'completed', 'Completed ✓');
+      addLog('Node 2 [plan] running: generating 5-stage crop plan...', 'info');
+      setNodeState('plan', 'active', 'Running...');
+      document.getElementById('progress-bar').style.width = '32%';
+    }, 12000);
+
+    const simTimeout2 = setTimeout(() => {
+      addLog('Node 2 completed. Passing planned crop to Spatial Digital Twin...', 'success');
+      setNodeState('plan', 'completed', 'Completed ✓');
+      addLog('Node 3 [spatial] running: generating 2D & 3D layout, calculating coordinates...', 'info');
+      setNodeState('spatial', 'active', 'Running...');
+      document.getElementById('progress-bar').style.width = '52%';
+    }, 28000);
+
+    const simTimeout3 = setTimeout(() => {
+      addLog('Node 3 completed. Passing main + companion crop to Yield Optimizer...', 'success');
+      setNodeState('spatial', 'completed', 'Completed ✓');
+      addLog('Node 4 [yield_compare] running: calculating intercrop yield boost...', 'info');
+      setNodeState('yield', 'active', 'Running...');
+      document.getElementById('progress-bar').style.width = '70%';
+    }, 45000);
+
+    try {
+      const response = await fetch('/full-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      clearTimeout(simTimeout1);
+      clearTimeout(simTimeout2);
+      clearTimeout(simTimeout3);
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Pipeline execution failed.');
+      }
+
+      // Check if paused at Human-in-the-Loop Interrupt
+      if (data.status === 'interrupted') {
+        activePipelineThreadId = data.thread_id;
+        
+        // Mark previous nodes completed
+        setNodeState('rec', 'completed', 'Completed ✓');
+        setNodeState('plan', 'completed', 'Completed ✓');
+        setNodeState('spatial', 'completed', 'Completed ✓');
+        setNodeState('yield', 'completed', 'Completed ✓');
+        setNodeState('disease', 'active', 'Paused ⏸️');
+
+        document.getElementById('progress-bar').style.width = '78%';
+        document.getElementById('pipeline-overall-status').innerText = 'State: Paused at Step 5 (Human-in-the-Loop) ⏸️';
+        document.getElementById('pipeline-overall-status').style.color = '#b45309';
+        document.getElementById('pipeline-overall-status').style.background = '#fef3c7';
+
+        // Execution log traces so far
+        if (data.pipeline_log && data.pipeline_log.length) {
+          addLog('── Upstream Execution Trace ──', 'accent');
+          data.pipeline_log.forEach(l => addLog(l, 'info'));
+        }
+
+        const q = data.interrupt?.question || `Would you like to upload a plant or leaf image for disease diagnosis on ${data.recommended_crop || 'your crop'}?`;
+        addLog(`⏸️ LangGraph Interrupt: Paused at Disease Diagnosis Agent. Awaiting farmer response...`, 'step');
+        addLog(`Question: ${q}`, 'info');
+
+        document.getElementById('hitl-question').innerHTML = `
+          The workflow has reached the <strong>Disease Diagnosis Agent</strong> for <strong>${data.recommended_crop || 'your recommended crop'}</strong>.<br>
+          ${q}
+        `;
+        document.getElementById('hitl-disease-card').style.display = 'block';
+        document.getElementById('hitl-disease-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀</span> Re-Run Autonomous Pipeline';
+        return;
+      }
+
+      // Completed directly (if uninterrupted)
+      finishPipelineSuccess(data);
+
+    } catch (err) {
+      clearInterval(timerInterval);
+      addLog(`❌ Error: ${err.message}`, 'step');
+      document.getElementById('pipeline-overall-status').innerText = 'State: Execution Error';
+      document.getElementById('pipeline-overall-status').style.color = '#dc2626';
+      document.getElementById('pipeline-overall-status').style.background = '#fee2e2';
+      btn.disabled = false;
+      btn.innerHTML = '<span>🚀</span> Re-Run Autonomous Pipeline';
+    }
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // HUMAN-IN-THE-LOOP INTERRUPT HANDLERS
+  // ═════════════════════════════════════════════════════════════════════════
+
+  let activePipelineThreadId = null;
+
+  function handleHitlYes() {
+    addLog('Farmer selected: "Yes". Please select a leaf photo to diagnose...', 'info');
+    document.getElementById('hitl-upload-panel').style.display = 'block';
+    const fileInp = document.getElementById('hitl-image-file');
+    if (fileInp) fileInp.focus();
+    document.getElementById('hitl-upload-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function cancelHitlUpload() {
+    document.getElementById('hitl-upload-panel').style.display = 'none';
+  }
+
+  async function handleHitlNo() {
+    if (!activePipelineThreadId) {
+      addLog('❌ Error: No active pipeline session found to resume.', 'step');
+      return;
+    }
+
+    const btnNo = document.getElementById('btn-hitl-no');
+    const btnYes = document.getElementById('btn-hitl-yes');
+    btnNo.disabled = true;
+    btnYes.disabled = true;
+    btnNo.innerHTML = '<span>⏳</span> Resuming Pipeline...';
+
+    addLog('Farmer selected: "No, Skip Disease Diagnosis".', 'step');
+    addLog('Resuming LangGraph StateGraph: Bypassing DiseaseDiagnosisAgent → continuing to ReportAgent...', 'info');
+    
+    setNodeState('disease', 'completed', 'Skipped ⏭️');
+    setNodeState('report', 'active', 'Synthesizing...');
+    document.getElementById('progress-bar').style.width = '88%';
+    document.getElementById('pipeline-overall-status').innerText = 'State: Resuming Pipeline to Final Report...';
+    document.getElementById('pipeline-overall-status').style.color = '#2563eb';
+    document.getElementById('pipeline-overall-status').style.background = '#eff6ff';
+
+    try {
+      const response = await fetch('/full-analysis/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thread_id: activePipelineThreadId,
+          choice: 'No'
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to resume pipeline.');
+      }
+      document.getElementById('hitl-disease-card').style.display = 'none';
+      finishPipelineSuccess(data);
+    } catch (err) {
+      addLog(`❌ Resume error: ${err.message}`, 'step');
+      document.getElementById('pipeline-overall-status').innerText = 'State: Resume Error';
+      document.getElementById('pipeline-overall-status').style.color = '#dc2626';
+    } finally {
+      btnNo.disabled = false;
+      btnYes.disabled = false;
+      btnNo.innerHTML = '<span>⏭️</span> No, Skip Disease Diagnosis';
+    }
+  }
+
+  async function submitHitlUpload() {
+    if (!activePipelineThreadId) {
+      addLog('❌ Error: No active pipeline session found to resume.', 'step');
+      return;
+    }
+    const fileInput = document.getElementById('hitl-image-file');
+    const symptomInput = document.getElementById('hitl-symptom-text');
+
+    if (!fileInput.files || !fileInput.files[0]) {
+      alert('Please select a leaf/plant photo file first, or click "Back to Options" and choose "No, Skip" if you do not have an image.');
+      return;
+    }
+
+    const btnSubmit = document.getElementById('btn-hitl-submit-upload');
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span>🔬</span> Running Multimodal Vision AI...';
+
+    addLog(`Uploading leaf photo (${fileInput.files[0].name})...`, 'step');
+    addLog('DiseaseDiagnosisAgent running: multimodal vision inspection in progress...', 'info');
+    
+    setNodeState('disease', 'active', 'Diagnosing 🔬');
+    document.getElementById('progress-bar').style.width = '85%';
+    document.getElementById('pipeline-overall-status').innerText = 'State: Multimodal Leaf Diagnosis in Progress...';
+    document.getElementById('pipeline-overall-status').style.color = '#7c3aed';
+    document.getElementById('pipeline-overall-status').style.background = '#f5f3ff';
+
+    const formData = new FormData();
+    formData.append('thread_id', activePipelineThreadId);
+    formData.append('choice', 'Yes');
+    formData.append('leaf_text', (symptomInput && symptomInput.value) || '');
+    formData.append('leaf_image', fileInput.files[0]);
+
+    try {
+      const response = await fetch('/full-analysis/resume', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Failed to analyze leaf image.');
+      }
+
+      if (data.status === 'interrupted') {
+        addLog('⏸️ LangGraph Interrupted again: ' + (data.interrupt?.prompt || ''), 'step');
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>🚀</span> Analyze Image & Resume Workflow';
+        return;
+      }
+
+      document.getElementById('hitl-disease-card').style.display = 'none';
+      finishPipelineSuccess(data);
+    } catch (err) {
+      addLog(`❌ Diagnosis error: ${err.message}`, 'step');
+      document.getElementById('pipeline-overall-status').innerText = 'State: Diagnosis Error';
+      document.getElementById('pipeline-overall-status').style.color = '#dc2626';
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.innerHTML = '<span>🚀</span> Analyze Image & Resume Workflow';
+    }
+  }
+
+  function finishPipelineSuccess(data) {
+    clearInterval(timerInterval);
+    ['rec', 'plan', 'spatial', 'yield', 'report'].forEach(n => setNodeState(n, 'completed', 'Completed ✓'));
+    
+    if (data.disease_choice === 'Yes') {
+      setNodeState('disease', 'completed', 'Diagnosed ✓');
+    } else {
+      setNodeState('disease', 'completed', 'Skipped ⏭️');
+    }
+
+    document.getElementById('progress-bar').style.width = '100%';
+    document.getElementById('pipeline-overall-status').innerText = 'State: Pipeline Completed Successfully ✓';
+    document.getElementById('pipeline-overall-status').style.color = '#059669';
+    document.getElementById('pipeline-overall-status').style.background = '#d1fae5';
+
+    // Log pipeline execution messages
+    if (data.pipeline_log && data.pipeline_log.length) {
+      addLog('── Full Execution Trace ──', 'accent');
+      data.pipeline_log.forEach(l => addLog(l, 'info'));
+    }
+    addLog(`✨ All pipeline agents completed in ${secondsElapsed}s. Results ready.`, 'success');
+
+    populateWorkflowResults(data);
+
+    const btn = document.getElementById('btn-submit');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🚀</span> Re-Run Autonomous Pipeline';
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // POPULATE ALL 6 TABS & KPI CARDS
+  // ═════════════════════════════════════════════════════════════════════════
+
+  function populateWorkflowResults(data) {
+    // 1. KPI Banner
+    document.getElementById('res-top-crop').innerText = data.recommended_crop || 'Top Crop';
+    document.getElementById('res-companion').innerText = data.companion_crop || 'Companion';
+    
+    const spData = data.spatial_result || data.spatial_summary || {};
+    document.getElementById('res-layout-score').innerText = `${spData.layout_score || 90}/100`;
+    
+    const plants = spData.insights?.total_plants || (spData.layout ? spData.layout.length : 600);
+    document.getElementById('res-plant-count').innerText = `${plants} plants mapped in 2D/3D`;
+
+    let yieldMatch = (data.yield_comparison || '').match(/\+(\d+\.?\d*)%/);
+    document.getElementById('res-yield-boost').innerText = yieldMatch ? yieldMatch[0] : '+25%';
+    document.getElementById('res-report-num').innerText = `#${data.report?.report_number || '1'}`;
+
+    // Disease KPI Card
+    const diag = data.disease_result || {};
+    const diseaseKpi = document.getElementById('res-disease-status');
+    const diseaseSub = document.getElementById('res-disease-sub');
+    if (data.disease_choice === 'Yes' && diag && diag.diagnosis) {
+      diseaseKpi.innerText = diag.diagnosis;
+      diseaseSub.innerText = `Confidence: ${diag.confidence || 'High'}`;
+      diseaseKpi.style.color = '#dc2626';
+    } else if (data.disease_choice === 'No') {
+      diseaseKpi.innerText = 'Skipped';
+      diseaseSub.innerText = 'Bypassed by Farmer';
+      diseaseKpi.style.color = '#64748b';
+    } else {
+      diseaseKpi.innerText = 'Healthy';
+      diseaseSub.innerText = 'No Pathogens Detected';
+      diseaseKpi.style.color = '#10b981';
+    }
+
+    // Tab 1: Recommendation
+    const rec = data.recommendation || {};
+    document.getElementById('rec-summary-text').innerText = `Recommended Crops: ${rec.crops_str || data.recommended_crop}`;
+    const recCont = document.getElementById('rec-crops-container');
+    recCont.innerHTML = '';
+    if (rec.crop_details && rec.crop_details.length) {
+      rec.crop_details.forEach(c => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:1.2rem;';
+        card.innerHTML = `
+          <div style="font-size:1.1rem; font-weight:700; color:#1e293b; margin-bottom:0.4rem;">
+            ${c.emoji || '🌱'} ${c.crop} <span style="font-size:0.75rem; background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:50px;">Score: ${c.suitability_score}%</span>
+          </div>
+          <p style="font-size:0.85rem; color:#475569; line-height:1.4;">${c.why_recommended}</p>
+        `;
+        recCont.appendChild(card);
+      });
+    }
+
+    // Tab 2: Plan
+    const plan = data.plan || {};
+    const planCont = document.getElementById('plan-cards-container');
+    planCont.innerHTML = `
+      <div class="timeline-card">
+        <h4><span>🌱</span> Sowing Schedule</h4>
+        <p>${typeof plan.sowing_schedule === 'object' ? JSON.stringify(plan.sowing_schedule) : plan.sowing_schedule}</p>
+      </div>
+      <div class="timeline-card">
+        <h4><span>💧</span> Irrigation Plan</h4>
+        <p>${typeof plan.irrigation_plan === 'object' ? JSON.stringify(plan.irrigation_plan) : plan.irrigation_plan}</p>
+      </div>
+      <div class="timeline-card">
+        <h4><span>🧪</span> Fertilizer Schedule</h4>
+        <p>${typeof plan.fertilizer_schedule === 'object' ? JSON.stringify(plan.fertilizer_schedule) : plan.fertilizer_schedule}</p>
+      </div>
+      <div class="timeline-card">
+        <h4><span>🐛</span> Pest Alerts &amp; Prevention</h4>
+        <p>${typeof plan.pest_alerts === 'object' ? JSON.stringify(plan.pest_alerts) : plan.pest_alerts}</p>
+      </div>
+      <div class="timeline-card">
+        <h4><span>🌾</span> Harvest Timeline</h4>
+        <p>${typeof plan.harvest_timeline === 'object' ? JSON.stringify(plan.harvest_timeline) : plan.harvest_timeline}</p>
+      </div>
+    `;
+
+    // Tab 3: Spatial Digital Twin (2D & 3D)
+    renderWorkflowSpatial(spData);
+
+    // Tab 4: Yield
+    document.getElementById('yield-report-content').innerText = data.yield_comparison || 'Yield comparison generated.';
+
+    // Tab 5: Disease Diagnosis
+    const disCont = document.getElementById('disease-tab-content');
+    if (data.disease_choice === 'Yes' && diag && diag.diagnosis) {
+      let prodHtml = '';
+      if (diag.products && diag.products.length) {
+        prodHtml = `
+          <div style="margin-top:1.2rem;">
+            <h5 style="font-size:0.95rem; font-weight:700; color:#1e293b; margin-bottom:0.6rem;">Recommended Treatments &amp; Products:</h5>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:0.8rem;">
+              ${diag.products.map(p => `
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:0.9rem;">
+                  <div style="font-weight:700; color:#0f172a; font-size:0.9rem;">${p.name}</div>
+                  <div style="font-size:0.78rem; color:#64748b; margin-bottom:4px;">${p.type || 'Treatment'} · Dose: ${p.dose || 'As labeled'}</div>
+                  <div style="display:flex; gap:0.5rem; margin-top:6px;">
+                    ${p.amazon ? `<a href="${p.amazon}" target="_blank" style="font-size:0.75rem; background:#ff9900; color:#111; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:700;">Amazon ↗</a>` : ''}
+                    ${p.flipkart ? `<a href="${p.flipkart}" target="_blank" style="font-size:0.75rem; background:#2874f0; color:#fff; padding:3px 8px; border-radius:4px; text-decoration:none; font-weight:700;">Flipkart ↗</a>` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      disCont.innerHTML = `
+        <div style="background:#fef2f2; border:1.5px solid #fecaca; border-radius:12px; padding:1.4rem; margin-bottom:1rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.8rem;">
+            <div style="font-size:1.25rem; font-weight:800; color:#991b1b; display:flex; align-items:center; gap:0.5rem;">
+              <span>🔬</span> ${diag.diagnosis}
+            </div>
+            <span style="background:#fee2e2; color:#b91c1c; border:1px solid #f87171; border-radius:50px; padding:3px 12px; font-weight:700; font-size:0.8rem;">
+              Confidence: ${diag.confidence || 'High'}
+            </span>
+          </div>
+          <div style="margin-bottom:0.8rem;">
+            <h5 style="font-size:0.9rem; font-weight:700; color:#7f1d1d; margin-bottom:0.3rem;">Treatment Plan:</h5>
+            <p style="font-size:0.88rem; color:#334155; line-height:1.5; white-space:pre-line;">${diag.treatment || 'No specific treatment required.'}</p>
+          </div>
+          <div>
+            <h5 style="font-size:0.9rem; font-weight:700; color:#7f1d1d; margin-bottom:0.3rem;">Preventative Measures for Next Season:</h5>
+            <p style="font-size:0.88rem; color:#334155; line-height:1.5; white-space:pre-line;">${diag.prevention || 'Maintain good field sanitation.'}</p>
+          </div>
+          ${prodHtml}
+        </div>
+      `;
+    } else {
+      disCont.innerHTML = `
+        <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:12px; padding:2rem; text-align:center; color:#64748b;">
+          <div style="font-size:2.5rem; margin-bottom:0.6rem;">⏭️</div>
+          <h4 style="color:#334155; margin-bottom:0.4rem;">Disease Diagnosis Skipped</h4>
+          <p style="font-size:0.88rem; max-width:540px; margin:0 auto 1.2rem auto;">
+            The farmer chose to bypass the Disease Diagnosis Agent for this run. All crop planning, spatial layouts, and yield projections proceeded normally.
+          </p>
+          <a href="/disease" class="btn-outline-action" style="display:inline-flex;">Run Standalone Leaf Scanner →</a>
+        </div>
+      `;
+    }
+
+    // Tab 6: Report
+    const rep = data.report || {};
+    const repCont = document.getElementById('report-summary-lines');
+    repCont.innerHTML = `
+      <div style="font-weight:700; color:#1e293b; margin-bottom:0.5rem;">Field Advisory Report #${rep.report_number || '1'} (${rep.farmer_name || 'Farmer'})</div>
+      <p style="font-size:0.88rem; color:#475569;">${(rep.summary_lines || []).join('<br>')}</p>
+    `;
+
+    // Show Results
+    document.getElementById('results-hub').style.display = 'block';
+    document.getElementById('results-hub').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // SPATIAL TWIN 2D & 3D RENDERING ENGINE
+  // ═════════════════════════════════════════════════════════════════════════
+
+  const CROP_VISUALS = {
+    'Corn':       { emoji: '🌽', glow: 'rgba(34,197,94,0.7)',  stalkColor: '#15803d', canopyColor: '#22c55e', accent: '#fde047', badge: '#14532d', leafShape: 'tall' },
+    'Tomato':     { emoji: '🍅', glow: 'rgba(239,68,68,0.75)', stalkColor: '#166534', canopyColor: '#ef4444', accent: '#fca5a5', badge: '#7f1d1d', leafShape: 'bush' },
+    'Wheat':      { emoji: '🌾', glow: 'rgba(234,179,8,0.75)', stalkColor: '#854d0e', canopyColor: '#eab308', accent: '#fef08a', badge: '#713f12', leafShape: 'wisp' },
+    'Rice':       { emoji: '🌾', glow: 'rgba(16,185,129,0.7)', stalkColor: '#065f46', canopyColor: '#10b981', accent: '#a7f3d0', badge: '#064e3b', leafShape: 'wisp' },
+    'Sugarcane':  { emoji: '🎋', glow: 'rgba(132,204,22,0.75)',stalkColor: '#3f6212', canopyColor: '#84cc16', accent: '#bef264', badge: '#365314', leafShape: 'tall' },
+    'Cotton':     { emoji: '🪴', glow: 'rgba(241,245,249,0.85)',stalkColor: '#475569', canopyColor: '#f8fafc', accent: '#e2e8f0', badge: '#334155', leafShape: 'bush' },
+    'Soybean':    { emoji: '🫘', glow: 'rgba(132,204,22,0.7)', stalkColor: '#365314', canopyColor: '#84cc16', accent: '#d9f99d', badge: '#3f6212', leafShape: 'bush' },
+    'Maize':      { emoji: '🌽', glow: 'rgba(250,204,21,0.75)',stalkColor: '#713f12', canopyColor: '#facc15', accent: '#fef08a', badge: '#78350f', leafShape: 'tall' },
+    'Onion':      { emoji: '🧅', glow: 'rgba(192,132,252,0.75)',stalkColor: '#15803d', canopyColor: '#c084fc', accent: '#e9d5ff', badge: '#581c87', leafShape: 'bulb' },
+    'Garlic':     { emoji: '🧄', glow: 'rgba(226,232,240,0.75)',stalkColor: '#166534', canopyColor: '#e2e8f0', accent: '#ffffff', badge: '#334155', leafShape: 'bulb' },
+    'Marigold':   { emoji: '🌼', glow: 'rgba(249,115,22,0.9)', stalkColor: '#9a3412', canopyColor: '#f97316', accent: '#fed7aa', badge: '#7c2d12', leafShape: 'flower' },
+    'Groundnut':  { emoji: '🥜', glow: 'rgba(217,119,6,0.75)', stalkColor: '#78350f', canopyColor: '#d97706', accent: '#fde68a', badge: '#78350f', leafShape: 'bush' },
+    'Mustard':    { emoji: '🌿', glow: 'rgba(250,204,21,0.8)', stalkColor: '#713f12', canopyColor: '#eab308', accent: '#fef08a', badge: '#713f12', leafShape: 'wisp' },
+    'Chickpea':   { emoji: '🫘', glow: 'rgba(245,158,11,0.75)',stalkColor: '#92400e', canopyColor: '#d97706', accent: '#fde68a', badge: '#78350f', leafShape: 'bush' },
+    'Potato':     { emoji: '🥔', glow: 'rgba(168,85,247,0.7)', stalkColor: '#4c1d95', canopyColor: '#a855f7', accent: '#e9d5ff', badge: '#581c87', leafShape: 'bush' },
+    'Sunflower':  { emoji: '🌻', glow: 'rgba(245,158,11,0.85)',stalkColor: '#713f12', canopyColor: '#eab308', accent: '#fef08a', badge: '#78350f', leafShape: 'flower' },
+    'default':    { emoji: '🌱', glow: 'rgba(74,222,128,0.6)', stalkColor: '#166534', canopyColor: '#22c55e', accent: '#86efac', badge: '#14532d', leafShape: 'bush' },
+  };
+
+  function getVisual(type) {
+    if (!type) return CROP_VISUALS['default'];
+    return CROP_VISUALS[type] || CROP_VISUALS['default'];
+  }
+
+  function make2DPlant(cell) {
+    const v = getVisual(cell.type);
+    const r = Math.max(5, cell.radius || 8);
+    const el = document.createElement('div');
+    el.className = 'plant-node';
+    el.title = `${v.emoji} ${cell.type} (Height: ${cell.height_m || 1.0}m${cell.border ? ', Border Defense' : ''})`;
+    el.style.cssText = `
+      position: absolute;
+      left: ${cell.x - r}px;
+      top: ${cell.y - r}px;
+      width: ${r * 2}px;
+      height: ${r * 2}px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, ${v.accent}, ${v.canopyColor} 60%, ${v.badge});
+      --glow: ${v.glow};
+      box-shadow: 0 0 8px 2px ${v.glow}, inset 0 0 4px rgba(255,255,255,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: ${Math.max(9, r * 0.95)}px;
+      cursor: pointer;
+      z-index: 2;
+    `;
+    el.textContent = v.emoji;
+    return el;
+  }
+
+  function make3DPlant(cell) {
+    const v = getVisual(cell.type);
+    const r = Math.max(7, cell.radius || 10);
+    const hM = cell.height_m || 1.0;
+    const stalkH = Math.min(46, Math.max(16, hM * 18));
+    const isBorder = !!cell.border;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'plant-wrap-3d';
+    wrap.style.cssText = `
+      position: absolute;
+      left: ${cell.x - r}px;
+      top: ${cell.y - r}px;
+      width: ${r * 2}px;
+      height: ${r * 2}px;
+      transform-style: preserve-3d;
+      cursor: pointer;
+      z-index: ${Math.round(cell.y)};
+    `;
+
+    // 1. Soil Mound Base (Floor-level circular glow ring)
+    const soilMound = document.createElement('div');
+    soilMound.className = 'plant-mound-3d';
+    soilMound.style.cssText = `
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, ${v.accent} 0%, ${v.canopyColor} 45%, ${v.badge} 85%, rgba(0,0,0,0.5) 100%);
+      box-shadow: 0 0 10px 3px ${v.glow}, 0 2px 6px rgba(0,0,0,0.35);
+      opacity: ${isBorder ? '0.95' : '0.88'};
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    `;
+    wrap.appendChild(soilMound);
+
+    // 2. Upright 3D Vertical Stalk
+    const stalkW = Math.max(3, Math.min(6, r * 0.28));
+    const stalk = document.createElement('div');
+    stalk.style.cssText = `
+      position: absolute;
+      left: 50%;
+      bottom: 50%;
+      width: ${stalkW}px;
+      height: ${stalkH}px;
+      margin-left: ${-stalkW / 2}px;
+      background: linear-gradient(to top, ${v.stalkColor}, ${v.canopyColor});
+      border-radius: ${stalkW}px;
+      transform-origin: bottom center;
+      transform: rotateX(-90deg);
+      transform-style: preserve-3d;
+      box-shadow: 0 0 3px rgba(0,0,0,0.25);
+    `;
+
+    // 3. Volumetric Cross-Plane Leaves (Front Plane)
+    const leafW = r * 1.5 + stalkW;
+    const leafH = stalkH * 0.58;
+    const leafPlane1 = document.createElement('div');
+    leafPlane1.style.cssText = `
+      position: absolute;
+      bottom: 20%;
+      left: ${-(leafW - stalkW) / 2}px;
+      width: ${leafW}px;
+      height: ${leafH}px;
+      background: radial-gradient(ellipse at 50% 40%, ${v.accent} 0%, ${v.canopyColor} 60%, ${v.stalkColor} 100%);
+      border-radius: 50% 50% 30% 30%;
+      opacity: 0.9;
+    `;
+    stalk.appendChild(leafPlane1);
+
+    // Volumetric Cross-Plane Leaves (Side Plane rotated 90deg)
+    const leafPlane2 = document.createElement('div');
+    leafPlane2.style.cssText = `
+      position: absolute;
+      bottom: 20%;
+      left: ${-(leafW - stalkW) / 2}px;
+      width: ${leafW}px;
+      height: ${leafH}px;
+      background: radial-gradient(ellipse at 50% 40%, ${v.accent} 0%, ${v.canopyColor} 60%, ${v.stalkColor} 100%);
+      border-radius: 50% 50% 30% 30%;
+      opacity: 0.9;
+      transform: rotateY(90deg);
+    `;
+    stalk.appendChild(leafPlane2);
+    wrap.appendChild(stalk);
+
+    // 4. Elevated 3D Billboarded Badge (Facing isometric camera)
+    const badgeSize = Math.max(20, Math.min(28, r * 1.4));
+    const badge = document.createElement('div');
+    badge.className = 'plant-badge-3d';
+    badge.style.cssText = `
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: ${badgeSize}px;
+      height: ${badgeSize}px;
+      margin-left: ${-badgeSize / 2}px;
+      margin-top: ${-badgeSize / 2}px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, ${v.accent}, ${v.canopyColor} 60%, ${v.badge});
+      border: 2px solid rgba(255,255,255,0.9);
+      box-shadow: 0 0 12px 4px ${v.glow}, 0 4px 10px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: ${Math.max(11, badgeSize * 0.58)}px;
+      transform: translateZ(${stalkH + 8}px) rotateZ(45deg) rotateX(-60deg);
+      transform-style: preserve-3d;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 15;
+      pointer-events: none;
+    `;
+    badge.textContent = v.emoji;
+    wrap.appendChild(badge);
+
+    // 5. 3D Floating Tooltip
+    const tooltip = document.createElement('div');
+    tooltip.className = 'plant-tooltip-3d';
+    tooltip.style.cssText = `
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      transform: translate(-50%, -10px) translateZ(${stalkH + 24}px) rotateZ(45deg) rotateX(-60deg);
+      background: rgba(15, 23, 42, 0.94);
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.25);
+      z-index: 100;
+    `;
+    tooltip.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:1rem;">${v.emoji}</span>
+        <strong style="color:${v.accent};font-size:0.85rem;">${cell.type}</strong>
+        ${cell.border ? '<span style="background:#ea580c;color:#fff;font-size:0.6rem;padding:2px 6px;border-radius:10px;font-weight:700;">Border</span>' : ''}
+      </div>
+      <div style="font-size:0.68rem;color:#94a3b8;margin-top:3px;">Height: ${hM}m · ${cell.row >= 0 ? 'Row ' + (cell.row + 1) : 'Perimeter Defense'}</div>
+    `;
+    wrap.appendChild(tooltip);
+
+    // Hover animation triggers
+    wrap.addEventListener('mouseenter', () => {
+      tooltip.style.opacity = '1';
+      badge.style.transform = `translateZ(${stalkH + 16}px) rotateZ(45deg) rotateX(-60deg) scale(1.35)`;
+      soilMound.style.boxShadow = `0 0 20px 8px ${v.glow}, 0 4px 12px rgba(0,0,0,0.5)`;
+    });
+    wrap.addEventListener('mouseleave', () => {
+      tooltip.style.opacity = '0';
+      badge.style.transform = `translateZ(${stalkH + 8}px) rotateZ(45deg) rotateX(-60deg) scale(1)`;
+      soilMound.style.boxShadow = `0 0 10px 3px ${v.glow}, 0 2px 6px rgba(0,0,0,0.35)`;
+    });
+
+    return wrap;
+  }
+
+  // ── 3D View Manipulation Controls ──
+  let isDragging3D = false;
+  let currentX = -45; // rotateZ
+  let currentY = 60;  // rotateX
+  let currentZoom = 1;
+
+  function applyWf3DTransform() {
+    const floor = document.getElementById('wf-isometric-floor');
+    if (floor) {
+      floor.style.transform = `scale(${currentZoom}) rotateX(${currentY}deg) rotateZ(${currentX}deg)`;
+    }
+  }
+
+  function resetWf3DView() {
+    currentX = -45; currentY = 60; currentZoom = 1;
+    applyWf3DTransform();
+  }
+
+  function setWfSpatialView(mode) {
+    const card3D = document.getElementById('wf-3d-card');
+    const card2D = document.getElementById('wf-2d-card');
+    const b3D = document.getElementById('btn-wf-view-3d');
+    const b2D = document.getElementById('btn-wf-view-2d');
+    const bSplit = document.getElementById('btn-wf-view-split');
+
+    [b3D, b2D, bSplit].forEach(b => b.classList.remove('active'));
+
+    if (mode === '3d') {
+      b3D.classList.add('active');
+      card3D.style.display = 'block';
+      card2D.style.display = 'none';
+    } else if (mode === '2d') {
+      b2D.classList.add('active');
+      card3D.style.display = 'none';
+      card2D.style.display = 'block';
+    } else if (mode === 'split') {
+      bSplit.classList.add('active');
+      card3D.style.display = 'block';
+      card2D.style.display = 'block';
+    }
+  }
+
+  // Setup 3D rotation & zoom event listeners
+  const wfWrapper3D = document.getElementById('wf-isometric-wrapper');
+  if (wfWrapper3D) {
+    wfWrapper3D.addEventListener('mousedown', (e) => {
+      isDragging3D = true;
+      wfWrapper3D.style.cursor = 'grabbing';
+    });
+    window.addEventListener('mouseup', () => {
+      isDragging3D = false;
+      if (wfWrapper3D) wfWrapper3D.style.cursor = 'grab';
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging3D) return;
+      currentX += e.movementX * 0.5;
+      currentY -= e.movementY * 0.5;
+      currentY = Math.max(0, Math.min(85, currentY));
+      applyWf3DTransform();
+    });
+    wfWrapper3D.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      currentZoom += e.deltaY * -0.001;
+      currentZoom = Math.max(0.4, Math.min(3.0, currentZoom));
+      applyWf3DTransform();
+    });
+  }
+
+  // ── Main Spatial Twin Render Function ──
+  function renderWorkflowSpatial(sp) {
+    if (!sp) return;
+
+    const mainCrop = sp.main_crop || 'Corn';
+    const compCrop = sp.companion || 'Soybean';
+    const landSize = sp.land_size || '1.0';
+    const layoutMode = sp.layout_mode || 'Auto';
+    const score = sp.layout_score || 88;
+    const ins = sp.insights || {};
+    const layout = sp.layout || [];
+    const zones = sp.zones || [];
+
+    // Summary text
+    const summaryEl = document.getElementById('spatial-summary-text');
+    if (summaryEl) {
+      summaryEl.innerText = `Custom precision twin designed for ${mainCrop} + ${compCrop} on ${landSize} acre(s). Mode: ${layoutMode.toUpperCase()} · Score: ${score}/100.`;
+    }
+
+    // 2D mode tag
+    const modeTag = document.getElementById('wf-2d-mode-tag');
+    if (modeTag) {
+      modeTag.innerText = `Layout Mode: ${layoutMode.toUpperCase()}`;
+    }
+
+    const container2D = document.getElementById('wf-grid-layout-container');
+    const container3D = document.getElementById('wf-isometric-floor');
+    const legendPanel = document.getElementById('wf-legend-panel');
+
+    // ── Setup 2D Canvas ──
+    if (container2D && layout.length > 0) {
+      container2D.innerHTML = '';
+
+      // Soil background
+      const soilBg = document.createElement('div');
+      soilBg.style.cssText = 'position:absolute; inset:0; background:repeating-conic-gradient(#d6c8a0 0% 25%,#c4b480 25% 50%) 0 0/30px 30px; border-radius:8px; opacity:0.22; pointer-events:none;';
+      container2D.appendChild(soilBg);
+
+      const canvasW = container2D.clientWidth || 700;
+      const canvasH = container2D.clientHeight || 440;
+      const scaleX2D = canvasW > 0 ? (canvasW / 800) : 1;
+      const scaleY2D = canvasH > 0 ? (canvasH / 500) : 1;
+
+      // Zones
+      zones.forEach(zone => {
+        const zd = document.createElement('div');
+        const zx = zone.x * scaleX2D;
+        const zy = zone.y * scaleY2D;
+        const zw = zone.w * scaleX2D;
+        const zh = zone.h * scaleY2D;
+        zd.style.cssText = `position:absolute; left:${zx}px; top:${zy}px; width:${zw}px; height:${zh}px; background:${zone.color}; opacity:0.08; border-right:2px dashed ${zone.color};`;
+        container2D.appendChild(zd);
+
+        const zl = document.createElement('div');
+        zl.textContent = `${getVisual(zone.crop).emoji} Zone: ${zone.crop}`;
+        zl.style.cssText = `position:absolute; left:${zx + 10}px; top:${zy + 8}px; font-size:0.75rem; font-weight:700; color:${zone.color}; text-shadow:0 1px 2px #fff;`;
+        container2D.appendChild(zl);
+      });
+
+      // 2D Plants
+      const frag2D = document.createDocumentFragment();
+      layout.forEach(cell => {
+        const scaledCell = {
+          ...cell,
+          x: cell.x * scaleX2D,
+          y: cell.y * scaleY2D,
+          radius: Math.max(5, (cell.radius || 8) * Math.min(scaleX2D, scaleY2D))
+        };
+        frag2D.appendChild(make2DPlant(scaledCell));
+      });
+      container2D.appendChild(frag2D);
+    }
+
+    // ── Setup 3D Canvas ──
+    if (container3D && layout.length > 0) {
+      // Clear previous plants while keeping structures
+      container3D.innerHTML = `
+        <div style="position:absolute; inset:0; border-radius:14px; border:6px solid #5c3d1a; box-shadow:inset 0 0 30px rgba(0,0,0,0.2);"></div>
+        <div style="position: absolute; top: -70px; right: 30px; width: 55px; height: 55px; background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8); border-radius: 50%; box-shadow: -5px 8px 20px rgba(0,0,0,0.4); transform: translateZ(60px); z-index:20;"></div>
+        <div style="position:absolute; top:-92px; right:12px; font-size:0.6rem; font-weight:700; color:#1d4ed8; transform:translateZ(60px); z-index:20; text-shadow:0 1px 2px #fff;">💧 Water Tank</div>
+        <div style="position: absolute; top: -130px; right: 100px; width: 90px; height: 70px; background: linear-gradient(180deg,#b45309,#92400e); border-radius: 4px; box-shadow: -6px 10px 25px rgba(0,0,0,0.45); transform: translateZ(55px); z-index:20;">
+          <div style="position:absolute; top:-22px; left:-6px; right:-6px; height:26px; background:linear-gradient(160deg,#dc2626,#991b1b); clip-path:polygon(0 100%,50% 0,100% 100%); border-radius:2px;"></div>
+          <div style="position:absolute; bottom:0; left:30%; width:40%; height:55%; background:#451a03; border-radius:2px 2px 0 0;"></div>
+        </div>
+        <div style="position:absolute; top:-148px; right:90px; font-size:0.6rem; font-weight:700; color:#92400e; transform:translateZ(55px); z-index:20; text-shadow:0 1px 2px #fff;">🏠 Barn</div>
+      `;
+
+      const frag3D = document.createDocumentFragment();
+      const seenCrops = {};
+
+      layout.forEach(cell => {
+        seenCrops[cell.type] = cell.color;
+        frag3D.appendChild(make3DPlant(cell));
+      });
+      container3D.appendChild(frag3D);
+
+      // Legend
+      if (legendPanel) {
+        legendPanel.style.display = 'flex';
+        legendPanel.innerHTML = '<strong style="font-size:0.88rem; color:#475569; margin-right:6px;">Crop Legend:</strong>';
+        Object.entries(seenCrops).forEach(([name, color]) => {
+          const v = getVisual(name);
+          const item = document.createElement('div');
+          item.className = 'legend-item';
+          item.innerHTML = `<div class="legend-dot" style="background:${color};"></div>${v.emoji} ${name}`;
+          legendPanel.appendChild(item);
+        });
+      }
+    }
+
+    // ── Metrics & KPIs ──
+    const metricsPanel = document.getElementById('wf-spatial-metrics');
+    if (metricsPanel) {
+      metricsPanel.style.display = 'block';
+      document.getElementById('wf-kpi-main').innerHTML = `${getVisual(mainCrop).emoji} ${mainCrop}`;
+      document.getElementById('wf-kpi-comp').innerHTML = `${getVisual(compCrop).emoji} ${compCrop}`;
+      document.getElementById('wf-kpi-land').innerHTML = `🌍 ${landSize} Acres`;
+      document.getElementById('wf-kpi-dim').innerText = ins.field_dim_m || '';
+      document.getElementById('wf-kpi-plants').innerText = `🌱 ~${(ins.total_real_plants || ins.interior_plants || layout.length).toLocaleString()}`;
+      document.getElementById('wf-kpi-scale').innerText = ins.visual_scale_ratio || 'Scaled Sector Grid';
+
+      // Pills
+      const scoreColor = score >= 80 ? '#16a34a' : score >= 55 ? '#d97706' : '#dc2626';
+      const scoreBg = score >= 80 ? '#f0fdf4' : score >= 55 ? '#fffbeb' : '#fef2f2';
+      const pillsContainer = document.getElementById('wf-metric-pills');
+      if (pillsContainer) {
+        pillsContainer.innerHTML = `
+          <div style="background:${scoreBg}; color:${scoreColor}; padding:6px 16px; border-radius:20px; font-size:0.92rem; font-weight:800; border:2px solid ${scoreColor};">
+            🏅 Layout Score: ${score}/100
+          </div>
+          <span style="background:#eef2ff; color:#4f46e5; padding:5px 12px; border-radius:20px; font-size:0.84rem; font-weight:700;">
+            🖥️ Digital Twin: ${layout.length} 3D Nodes
+          </span>
+          <span style="background:#f0fdf4; color:#16a34a; padding:5px 12px; border-radius:20px; font-size:0.84rem; font-weight:700;">
+            🌍 ${ins.land_efficiency || 85}% Land Efficiency
+          </span>
+          <span style="background:#ecfeff; color:#0891b2; padding:5px 12px; border-radius:20px; font-size:0.84rem; font-weight:700;">
+            💧 ${ins.water_saving_pct || 15}% Water Saved
+          </span>
+          <span style="background:#fdf4ff; color:#c026d3; padding:5px 12px; border-radius:20px; font-size:0.84rem; font-weight:700;">
+            🚀 ${ins.yield_boost_pct || 25}% Yield Boost
+          </span>
+          ${ins.total_row_km ? `<span style="background:#fffbeb; color:#b45309; padding:5px 12px; border-radius:20px; font-size:0.84rem; font-weight:700;">📏 ${ins.total_rows} Rows (${ins.total_row_km} km)</span>` : ''}
+        `;
+      }
+    }
+
+    // ── 9-Heading AI Explanation ──
+    const analysisDiv = document.getElementById('wf-spatial-analysis');
+    if (analysisDiv && sp.analysis) {
+      analysisDiv.style.display = 'block';
+      let formatted = sp.analysis
+        .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--primary);">$1</strong>')
+        .replace(/\n/g, '<br>');
+      analysisDiv.innerHTML = `
+        <h4 style="margin:0 0 10px 0; color:var(--primary-dark); font-size:1.05rem; display:flex; align-items:center; gap:6px;">
+          <span>🤖</span> AI Precision Spatial Layout &amp; Canopy Explanation
+        </h4>
+        <div style="color:#334155; font-size:0.92rem; line-height:1.7;">${formatted}</div>
+      `;
+    }
+
+    // ── Zone Allocation Table ──
+    const zoneDiv = document.getElementById('wf-zone-table-container');
+    if (zoneDiv && sp.zone_yields && sp.zone_yields.length) {
+      zoneDiv.style.display = 'block';
+      zoneDiv.innerHTML = `
+        <div style="background:#ffffff; border:1px solid #d4e9d4; border-radius:12px; padding:1.2rem; box-shadow:var(--shadow-sm);">
+          <h4 style="margin:0 0 10px 0; color:#475569; font-size:0.92rem;">📊 Commercial Zone Allocation &amp; Real Field Plant Counts</h4>
+          <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+            <thead><tr style="background:#f1f5f9;">
+              <th style="padding:8px 12px; text-align:left; border:1px solid #e2e8f0; color:#475569;">Crop Name</th>
+              <th style="padding:8px 12px; text-align:right; border:1px solid #e2e8f0; color:#475569;">Field Area</th>
+              <th style="padding:8px 12px; text-align:right; border:1px solid #e2e8f0; color:#475569;">Spacing</th>
+              <th style="padding:8px 12px; text-align:right; border:1px solid #e2e8f0; color:#475569;">Est. Real Plants</th>
+              <th style="padding:8px 12px; text-align:right; border:1px solid #e2e8f0; color:#475569;">Est. Yield (tonnes)</th>
+            </tr></thead>
+            <tbody>
+              ${sp.zone_yields.map(z => {
+                const cleanName = z.crop.replace(' (border)', '');
+                const realCount = ins.real_plant_counts?.[z.crop]?.plant_count;
+                const spCm = ins.real_plant_counts?.[z.crop]?.spacing_cm;
+                return `<tr>
+                  <td style="padding:8px 12px; border:1px solid #e2e8f0;">${getVisual(cleanName).emoji} ${z.crop}</td>
+                  <td style="padding:8px 12px; border:1px solid #e2e8f0; text-align:right;">${z.acres} ac</td>
+                  <td style="padding:8px 12px; border:1px solid #e2e8f0; text-align:right; color:#64748b;">${spCm ? spCm + ' cm' : '—'}</td>
+                  <td style="padding:8px 12px; border:1px solid #e2e8f0; text-align:right; font-weight:700; color:#7e22ce;">${realCount ? '~' + realCount.toLocaleString() : '—'}</td>
+                  <td style="padding:8px 12px; border:1px solid #e2e8f0; text-align:right; font-weight:700; color:#15803d;">${z.yield_t} t</td>
+                </tr>`;
+              }).join('')}
+              <tr style="background:#f0fdf4; font-weight:700;">
+                <td style="padding:8px 12px; border:1px solid #bbf7d0;">Total Commercial Scale</td>
+                <td style="padding:8px 12px; border:1px solid #bbf7d0; text-align:right;">${landSize} ac</td>
+                <td style="padding:8px 12px; border:1px solid #bbf7d0; text-align:right;">—</td>
+                <td style="padding:8px 12px; border:1px solid #bbf7d0; text-align:right; color:#7e22ce;">~${ins.total_real_plants ? ins.total_real_plants.toLocaleString() : '—'} Plants</td>
+                <td style="padding:8px 12px; border:1px solid #bbf7d0; text-align:right; color:#15803d;">${ins.total_yield || '—'} t</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // ── Memory Decisions Panel ──
+    const memPanel = document.getElementById('wf-memory-panel');
+    if (memPanel && sp.memory_used) {
+      memPanel.style.display = 'block';
+
+      // Soil impact badge
+      const si = (sp.soil_impact || 'neutral').toLowerCase();
+      const soilBadge = document.getElementById('wf-soil-impact-badge');
+      if (soilBadge) {
+        soilBadge.textContent = si === 'improves' ? '🌱 Soil Improves' : si === 'degrades' ? '⚠️ Soil Degrades' : '⚪ Soil Neutral';
+        soilBadge.style.background = si === 'improves' ? '#dcfce7' : si === 'degrades' ? '#fef2f2' : '#f1f5f9';
+        soilBadge.style.color = si === 'improves' ? '#15803d' : si === 'degrades' ? '#b91c1c' : '#64748b';
+      }
+
+      // Crop override notice
+      const overrideNotice = document.getElementById('wf-override-notice');
+      if (overrideNotice) {
+        if (sp.override_crop) {
+          overrideNotice.style.display = 'block';
+          overrideNotice.innerHTML = `
+            <strong style="color:#b91c1c;">🔄 Autonomous Crop Override Applied</strong><br>
+            Selected crop <strong>${sp.requested_crop || '—'}</strong> was adjusted to 
+            <strong style="color:#15803d;">${sp.override_crop}</strong> based on soil history and water availability.<br>
+            <span style="font-size:0.86rem; color:#7f1d1d;">${sp.override_reason || ''}</span>
+          `;
+        } else {
+          overrideNotice.style.display = 'none';
+        }
+      }
+
+      // Memory log steps
+      const memSteps = document.getElementById('wf-memory-log-steps');
+      if (memSteps && sp.memory_log) {
+        memSteps.innerHTML = sp.memory_log.map((step, i) => {
+          const isWarn = step.includes('⚠') || step.includes('⚠️');
+          return `
+            <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px;">
+              <div style="min-width:22px; height:22px; border-radius:50%; background:${isWarn ? '#fef3c7' : '#ede9fe'}; border:2px solid ${isWarn ? '#fbbf24' : '#7c3aed'}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:700; color:${isWarn ? '#92400e' : '#5b21b6'}; flex-shrink:0;">${i+1}</div>
+              <div style="font-size:0.88rem; color:${isWarn ? '#92400e' : '#374151'}; line-height:1.4;">${step}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Warnings
+      const memWarns = document.getElementById('wf-memory-warnings');
+      if (memWarns) {
+        const warns = sp.warnings || [];
+        if (warns.length) {
+          memWarns.innerHTML = `
+            <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px;">
+              <div style="font-weight:700; color:#b45309; margin-bottom:4px; font-size:0.88rem;">⚠️ Decision Warnings</div>
+              ${warns.map(w => `<div style="font-size:0.84rem; color:#92400e; margin-bottom:2px; padding-left:6px; border-left:3px solid #fbbf24;">${w}</div>`).join('')}
+            </div>
+          `;
+        } else {
+          memWarns.innerHTML = `<div style="color:#16a34a; font-size:0.86rem; font-weight:600;">✅ No rotation conflicts — crop-pairing is fully verified against farm history.</div>`;
+        }
+      }
+    }
+
+    // ── Limitations & Agronomic Actions ──
+    const limDiv = document.getElementById('wf-limitations-container');
+    if (limDiv) {
+      limDiv.style.display = 'block';
+      let limHtml = '';
+
+      if (ins.action_items && ins.action_items.length) {
+        limHtml += `
+          <div style="background:#ffffff; border:1px solid #d4e9d4; border-radius:12px; padding:1.2rem; margin-bottom:1rem; box-shadow:var(--shadow-sm);">
+            <h4 style="margin:0 0 8px 0; color:#475569; font-size:0.92rem;">⚡ Agronomic Implementation Checklist</h4>
+            <ul style="margin:0; padding-left:18px; color:#334155; font-size:0.88rem; line-height:1.6;">
+              ${ins.action_items.map(a => `<li style="margin-bottom:4px;">${a}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+      }
+
+      if (sp.limitations && sp.limitations.length) {
+        limHtml += `
+          <details style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+            <summary style="background:#f8fafc; padding:10px 14px; cursor:pointer; font-size:0.86rem; font-weight:700; color:#64748b; list-style:none;">
+              🔍 System-Level Constraints &amp; Modeling Assumptions (${sp.limitations.length}) — click to view
+            </summary>
+            <div style="padding:10px 16px 14px;">
+              <ol style="margin:0; padding-left:18px; color:#64748b; font-size:0.84rem; line-height:1.6;">
+                ${sp.limitations.map(l => `<li style="margin-bottom:3px;">${l}</li>`).join('')}
+              </ol>
+            </div>
+          </details>
+        `;
+      }
+      limDiv.innerHTML = limHtml;
+    }
+  }
+</script>
+
+{% endblock %}

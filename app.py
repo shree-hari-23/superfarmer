@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
-from agents.agents import OrchestratorAgent
+from agents.agents import OrchestratorAgent, UserAuthAgent
 from dotenv import load_dotenv
 import os
 import threading
@@ -36,6 +36,7 @@ _ROUTE_MAP = {
     'spatial_planner':  '/spatial-planner',
     'report':           '/report',
     'benchmarks':       '/benchmarks',
+    'workflow':         '/workflow',
     'static':           '/static',
 }
 
@@ -225,7 +226,6 @@ def login_post(
         },)).start()
 
         # Try to grab existing farmer profile
-        from agents.agents import UserAuthAgent
         farmer_id = UserAuthAgent.get_farmer_profile_by_user(res['user_id'])
         if farmer_id:
             request.session['farmer_id'] = farmer_id
@@ -285,7 +285,6 @@ def recommendation_get(request: Request):
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        from agents.agents import UserAuthAgent
         fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
         request.session['farmer_id'] = fid if fid else request.session['user_id']
         
@@ -311,7 +310,6 @@ def recommendation_post(
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        from agents.agents import UserAuthAgent
         fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
         request.session['farmer_id'] = fid if fid else request.session['user_id']
 
@@ -329,6 +327,308 @@ def recommendation_post(
     request.session['last_rec'] = rec_plain
     request.session['soil_data'] = data
     return _render(request, 'recommendation.html', recommendations=rec_plain)
+
+
+# ── LangGraph Full Farm Analysis Pipeline & Workflow ─────────────────────────
+
+@app.get('/workflow', response_class=HTMLResponse)
+def workflow_get(request: Request):
+    if not _logged_in(request):
+        return _redirect('login')
+    if not request.session.get('farmer_id'):
+        fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
+        request.session['farmer_id'] = fid if fid else request.session['user_id']
+
+    fid = request.session.get('farmer_id', 0)
+    farmer_data = {
+        'farmer_id': fid,
+        'soil_type': 'Black',
+        'n': 80,
+        'p': 40,
+        'k': 40,
+        'temp': 27,
+        'rain': 800,
+        'water_const': 'Medium',
+        'land_size': 1.0,
+        'farmer_name': 'Farmer',
+        'location': 'India',
+    }
+
+    try:
+        from config import execute_fluxbase_sql
+        prof_res = execute_fluxbase_sql(f"SELECT * FROM farmer_profile WHERE farmer_id={int(fid)} LIMIT 1")
+        if prof_res.get('rows'):
+            p = prof_res['rows'][0]
+            farmer_data['farmer_name'] = p.get('name') or 'Farmer'
+            farmer_data['location'] = p.get('location') or 'India'
+            farmer_data['land_size'] = float(p.get('land_size', 1.0)) or 1.0
+            farmer_data['water_const'] = p.get('water_availability') or 'Medium'
+
+        soil_res = execute_fluxbase_sql(f"SELECT * FROM soil_records WHERE farmer_id={int(fid)} ORDER BY recorded_at DESC LIMIT 1")
+        if soil_res.get('rows'):
+            s = soil_res['rows'][0]
+            farmer_data['soil_type'] = s.get('soil_type') or farmer_data['soil_type']
+            farmer_data['n'] = float(s.get('nitrogen', farmer_data['n']))
+            farmer_data['p'] = float(s.get('phosphorus', farmer_data['p']))
+            farmer_data['k'] = float(s.get('potassium', farmer_data['k']))
+            if s.get('temperature'):
+                farmer_data['temp'] = float(s['temperature'])
+    except Exception as e:
+        print(f"   [Workflow] Profile prefetch note: {e}")
+
+    last_rec = request.session.get('last_rec')
+    return _render(request, 'workflow.html', farmer=farmer_data, last_rec=last_rec)
+
+
+@app.post('/full-analysis')
+async def full_analysis_post(request: Request):
+    """
+    LangGraph multi-step pipeline: Recommendation → Plan → Spatial Twin → Yield → Report.
+    Each agent's output feeds into the next via shared FarmState.
+    """
+    if not _logged_in(request):
+        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
+    if not request.session.get('farmer_id'):
+        fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
+        request.session['farmer_id'] = fid if fid else request.session['user_id']
+
+    data = {}
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            data = await request.json()
+        except Exception:
+            data = {}
+    else:
+        try:
+            form = await request.form()
+            data = dict(form)
+        except Exception:
+            data = {}
+
+    from agents.orchestrator_graph import run_full_analysis
+
+    result = run_full_analysis(
+        farmer_id=request.session['farmer_id'],
+        soil_type=data.get('soil_type', 'Loamy'),
+        n=float(data.get('n', 80)),
+        p=float(data.get('p', 40)),
+        k=float(data.get('k', 40)),
+        temp=float(data.get('temp', 27)),
+        rain=float(data.get('rain', 800)),
+        water_const=data.get('water_const', 'Medium'),
+        land_size=float(data.get('land_size', 1.0)),
+        layout_preference=data.get('layout_preference', 'Auto'),
+        farmer_name=data.get('farmer_name', 'Farmer'),
+        location=data.get('location', 'India'),
+    )
+
+    # If pipeline paused at an interrupt (e.g. Disease Diagnosis Gate)
+    spatial_res = result.get('spatial_result', {})
+    if result.get('status') == 'interrupted':
+        request.session['pipeline_thread_id'] = result.get('thread_id')
+        if result.get('recommendation_result'):
+            rec_plain = dict(result['recommendation_result']) if isinstance(result['recommendation_result'], dict) else {}
+            request.session['last_rec'] = rec_plain
+        return JSONResponse({
+            'success': True,
+            'status': 'interrupted',
+            'thread_id': result.get('thread_id'),
+            'interrupt': result.get('interrupt', {}),
+            'current_step': result.get('current_step', 'disease_prompt'),
+            'pipeline_log': result.get('pipeline_log', []),
+            'recommended_crop': result.get('recommended_crop', ''),
+            'companion_crop': result.get('companion_crop', ''),
+            'recommendation': result.get('recommendation_result', {}),
+            'plan': result.get('plan_result', {}),
+            'spatial_result': spatial_res,
+            'spatial_summary': {
+                'main_crop': spatial_res.get('main_crop', ''),
+                'companion': spatial_res.get('companion', ''),
+                'layout_score': spatial_res.get('layout_score', 0),
+                'layout_mode': spatial_res.get('layout_mode', ''),
+                'insights': spatial_res.get('insights', {}),
+                'zone_yields': spatial_res.get('zone_yields', []),
+                'analysis': spatial_res.get('analysis', ''),
+                'memory_log': spatial_res.get('memory_log', []),
+                'soil_impact': spatial_res.get('soil_impact', ''),
+                'layout': spatial_res.get('layout', []),
+                'zones': spatial_res.get('zones', []),
+                'limitations': spatial_res.get('limitations', []),
+                'sunlight_note': spatial_res.get('sunlight_note', ''),
+                'warnings': spatial_res.get('warnings', []),
+                'farmer_name': spatial_res.get('farmer_name', ''),
+                'land_size': spatial_res.get('land_size', ''),
+            },
+            'yield_comparison': result.get('yield_result', ''),
+        })
+
+    # Store results in session for individual pages to use
+    if result.get('recommendation_result'):
+        rec_plain = dict(result['recommendation_result']) if isinstance(result['recommendation_result'], dict) else {}
+        request.session['last_rec'] = rec_plain
+    if result.get('report_result'):
+        request.session['last_report'] = True
+    if result.get('disease_result') and isinstance(result['disease_result'], dict) and result['disease_result'].get('diagnosis'):
+        request.session['last_diagnosis'] = result['disease_result']
+
+    # Build response with full Spatial Twin 2D & 3D layout data
+    response_data = {
+        'success': True,
+        'status': 'complete',
+        'pipeline_log': result.get('pipeline_log', []),
+        'recommended_crop': result.get('recommended_crop', ''),
+        'companion_crop': result.get('companion_crop', ''),
+        'recommendation': result.get('recommendation_result', {}),
+        'plan': result.get('plan_result', {}),
+        'spatial_result': spatial_res,
+        'spatial_summary': {
+            'main_crop': spatial_res.get('main_crop', ''),
+            'companion': spatial_res.get('companion', ''),
+            'layout_score': spatial_res.get('layout_score', 0),
+            'layout_mode': spatial_res.get('layout_mode', ''),
+            'insights': spatial_res.get('insights', {}),
+            'zone_yields': spatial_res.get('zone_yields', []),
+            'analysis': spatial_res.get('analysis', ''),
+            'memory_log': spatial_res.get('memory_log', []),
+            'soil_impact': spatial_res.get('soil_impact', ''),
+            'layout': spatial_res.get('layout', []),
+            'zones': spatial_res.get('zones', []),
+            'limitations': spatial_res.get('limitations', []),
+            'sunlight_note': spatial_res.get('sunlight_note', ''),
+            'warnings': spatial_res.get('warnings', []),
+            'farmer_name': spatial_res.get('farmer_name', ''),
+            'land_size': spatial_res.get('land_size', ''),
+            'memory_used': spatial_res.get('memory_used', False),
+            'override_crop': spatial_res.get('override_crop'),
+            'override_reason': spatial_res.get('override_reason'),
+            'requested_crop': spatial_res.get('requested_crop'),
+        },
+        'yield_comparison': result.get('yield_result', ''),
+        'disease_choice': result.get('disease_choice', 'No'),
+        'disease_result': result.get('disease_result', {}),
+        'report': result.get('report_result', {}),
+        'error': result.get('error'),
+    }
+
+    return JSONResponse(response_data)
+
+
+@app.post('/full-analysis/resume')
+async def full_analysis_resume_post(
+    request: Request,
+    thread_id: str = Form(default=''),
+    choice: str = Form(default=''),
+    leaf_text: str = Form(default=''),
+    leaf_image: UploadFile = File(default=None),
+):
+    """
+    Resumes the LangGraph pipeline from a human-in-the-loop interrupt.
+    Receives farmer choice (Yes/No) and optional leaf image/symptoms.
+    """
+    if not _logged_in(request):
+        return JSONResponse({'error': 'Unauthorized'}, status_code=401)
+
+    image_b64 = None
+    content_type = request.headers.get("content-type", "")
+
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            thread_id = body.get("thread_id") or thread_id or request.session.get('pipeline_thread_id')
+            choice = body.get("choice", choice)
+            leaf_text = body.get("leaf_text", leaf_text)
+            image_b64 = body.get("image")
+        except Exception:
+            pass
+    else:
+        if not thread_id:
+            thread_id = request.session.get('pipeline_thread_id')
+        if leaf_image and leaf_image.filename:
+            import base64
+            contents = await leaf_image.read()
+            b64_str = base64.b64encode(contents).decode('utf-8')
+            ct = getattr(leaf_image, 'content_type', 'image/jpeg') or 'image/jpeg'
+            image_b64 = f"data:{ct};base64,{b64_str}"
+
+    if not thread_id:
+        return JSONResponse({'error': 'No active pipeline thread ID found to resume.'}, status_code=400)
+
+    from agents.orchestrator_graph import resume_pipeline
+
+    resume_payload = {
+        "choice": choice or "No",
+        "image": image_b64,
+        "leaf_text": leaf_text,
+    }
+
+    result = resume_pipeline(thread_id, resume_payload)
+    spatial_res = result.get('spatial_result', {})
+
+    # If another interrupt was raised (e.g. 2nd pause waiting for image upload)
+    if result.get('status') == 'interrupted':
+        return JSONResponse({
+            'success': True,
+            'status': 'interrupted',
+            'thread_id': result.get('thread_id'),
+            'interrupt': result.get('interrupt', {}),
+            'current_step': result.get('current_step', 'disease_upload'),
+            'pipeline_log': result.get('pipeline_log', []),
+            'recommended_crop': result.get('recommended_crop', ''),
+            'companion_crop': result.get('companion_crop', ''),
+            'recommendation': result.get('recommendation_result', {}),
+            'plan': result.get('plan_result', {}),
+            'spatial_result': spatial_res,
+            'yield_comparison': result.get('yield_result', ''),
+        })
+
+    # Save to session
+    if result.get('recommendation_result'):
+        request.session['last_rec'] = dict(result['recommendation_result'])
+    if result.get('report_result'):
+        request.session['last_report'] = True
+    if result.get('disease_result') and isinstance(result['disease_result'], dict) and result['disease_result'].get('diagnosis'):
+        request.session['last_diagnosis'] = result['disease_result']
+
+    response_data = {
+        'success': True,
+        'status': 'complete',
+        'pipeline_log': result.get('pipeline_log', []),
+        'recommended_crop': result.get('recommended_crop', ''),
+        'companion_crop': result.get('companion_crop', ''),
+        'recommendation': result.get('recommendation_result', {}),
+        'plan': result.get('plan_result', {}),
+        'spatial_result': spatial_res,
+        'spatial_summary': {
+            'main_crop': spatial_res.get('main_crop', ''),
+            'companion': spatial_res.get('companion', ''),
+            'layout_score': spatial_res.get('layout_score', 0),
+            'layout_mode': spatial_res.get('layout_mode', ''),
+            'insights': spatial_res.get('insights', {}),
+            'zone_yields': spatial_res.get('zone_yields', []),
+            'analysis': spatial_res.get('analysis', ''),
+            'memory_log': spatial_res.get('memory_log', []),
+            'soil_impact': spatial_res.get('soil_impact', ''),
+            'layout': spatial_res.get('layout', []),
+            'zones': spatial_res.get('zones', []),
+            'limitations': spatial_res.get('limitations', []),
+            'sunlight_note': spatial_res.get('sunlight_note', ''),
+            'warnings': spatial_res.get('warnings', []),
+            'farmer_name': spatial_res.get('farmer_name', ''),
+            'land_size': spatial_res.get('land_size', ''),
+            'memory_used': spatial_res.get('memory_used', False),
+            'override_crop': spatial_res.get('override_crop'),
+            'override_reason': spatial_res.get('override_reason'),
+            'requested_crop': spatial_res.get('requested_crop'),
+        },
+        'yield_comparison': result.get('yield_result', ''),
+        'disease_choice': result.get('disease_choice', 'No'),
+        'disease_result': result.get('disease_result', {}),
+        'report': result.get('report_result', {}),
+        'error': result.get('error'),
+    }
+
+    return JSONResponse(response_data)
 
 
 # ── AI Model Benchmarks & Accuracy Metrics ──────────────────────────────────
@@ -363,7 +663,6 @@ def plan_get(request: Request):
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        from agents.agents import UserAuthAgent
         fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
         request.session['farmer_id'] = fid if fid else request.session['user_id']
     return _render(request, 'plan.html')
@@ -377,7 +676,6 @@ def plan_post(
     if not _logged_in(request):
         return _redirect('login')
     if not request.session.get('farmer_id'):
-        from agents.agents import UserAuthAgent
         fid = UserAuthAgent.get_farmer_profile_by_user(request.session['user_id'])
         request.session['farmer_id'] = fid if fid else request.session['user_id']
 

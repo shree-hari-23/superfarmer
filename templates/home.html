@@ -6,18 +6,27 @@
     <p>A multi-agent AI platform built for Indian farmers — combining machine learning, real-time weather, and Fluxbase AI Models (flux-turbo, flux-omni, flux-pro, flux-ultra)
         to help you grow smarter.</p>
     <div class="hero-badges">
+        <span class="badge">⚡ LangGraph Multi-Agent Pipeline</span>
         <span class="badge">🗺️ Spatial Digital Twin</span>
         <span class="badge">🌐 10 Indian Languages</span>
         <span class="badge">📊 Yield Optimizer</span>
     </div>
     {% if session.get('user_id') %}
-    <a href="{{ url_for('recommendation') }}" class="btn btn-lg">Go to Dashboard →</a>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1rem;">
+        <a href="{{ url_for('workflow') }}" class="btn btn-lg" style="background: var(--secondary); color: #1a2e1a; font-weight: 800;">⚡ Launch Agent Workflow →</a>
+        <a href="{{ url_for('recommendation') }}" class="btn btn-lg">Go to Dashboard →</a>
+    </div>
     {% else %}
     <a href="{{ url_for('signup') }}" class="btn btn-lg">Get Started Free →</a>
     {% endif %}
 </div>
 
 <div class="features-grid">
+    <div class="feature-card" style="border: 1.5px solid #86efac; background: #f0fdf4;">
+        <span class="icon">⚡</span>
+        <h3>Autonomous Multi-Agent Pipeline</h3>
+        <p>Powered by <strong>LangGraph</strong>. Chains 5 agents automatically: Recommendation ➔ Plan ➔ Spatial Twin ➔ Yield ➔ Report with zero manual handoffs.</p>
+    </div>
     <div class="feature-card">
         <span class="icon">🌱</span>
         <h3>Smart Profiling</h3>
